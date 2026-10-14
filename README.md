@@ -5,7 +5,7 @@
 [![React](https://img.shields.io/badge/React-v19-blue.svg?style=flat&logo=react)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind--CSS-v4-38bdf8.svg?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
 [![Platform Support](https://img.shields.io/badge/Platform-Android-brightgreen.svg?style=flat)]()
-[![Download APK](https://img.shields.io/badge/Download-Latest%20APK-brightgreen.svg?style=flat&logo=android)](https://github.com/EdiBianco/TeleDrive/releases/latest/download/teledrive-android.apk)
+[![Download APK](https://img.shields.io/badge/Download-Latest%20APK-brightgreen.svg?style=flat&logo=android)](https://github.com/EdiBianco/TeleDrive-Android/releases/latest/download/teledrive-android.apk)
 
 TeleDrive is a modern, zero-overhead cloud storage application that transforms a **private Telegram channel** into your own **unlimited personal drive**. Built on top of **Tauri v2**, **React 19**, **Vite**, **Tailwind CSS v4**, and **GramJS**, it delivers a Google Drive-like interface for managing nested folder trees and streaming files directly to/from Telegram servers without intermediate relays or storage subscription costs.
 
@@ -151,7 +151,7 @@ Ensure your system is equipped with the following toolchains before building:
 
 ### Installing the APK
 
-Download the [latest APK](https://github.com/EdiBianco/TeleDrive/releases/latest/download/teledrive-android.apk) from the releases page and install it. Allow *Install unknown apps* for the app you open it with.
+Download the [latest APK](https://github.com/EdiBianco/TeleDrive-Android/releases/latest/download/teledrive-android.apk) from the releases page and install it. Allow *Install unknown apps* for the app you open it with.
 
 ### Acquiring Telegram API Keys
 
@@ -166,7 +166,7 @@ To instantiate a connection, you must register a custom application credentials 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/EdiBianco/teledrive.git
+   git clone https://github.com/EdiBianco/TeleDrive-Android.git
    cd teledrive
    ```
 

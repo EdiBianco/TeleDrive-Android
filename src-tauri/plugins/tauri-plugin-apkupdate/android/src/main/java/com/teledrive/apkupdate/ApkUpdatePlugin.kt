@@ -18,7 +18,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 
-private const val REPO = "EdiBianco/TeleDrive"
+private const val REPO = "EdiBianco/TeleDrive-Android"
 private const val APK_ASSET = "teledrive-android.apk"
 private const val USER_AGENT = "TeleDrive-Android-Updater"
 private const val UPDATES_DIR = "updates"
