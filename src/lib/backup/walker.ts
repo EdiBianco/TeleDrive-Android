@@ -41,7 +41,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { BackupSourceFolders } from "./sourceFolders";
 import { directoryShouldBeExcluded, normalizeRelativePath, pathMatchesExclude } from "./sourceFolders";
 import { isJunkFile } from "../storage/fileSanitizer";
-import { isMediaSource, isTreeSource, MEDIA_VIDEOS_ROOT } from "./sourceNames";
+import { isMediaSource, isTreeSource, MEDIA_VIDEOS_ROOT, sourceDisplayName } from "./sourceNames";
 
 /** A single file produced by the walker. JS-side camelCase; downstream
  *  (manifest, runner) keys everything off `absPath` and `mtimeMs`. */
@@ -125,12 +125,18 @@ async function walkOneFolder(
   try {
     entries = await listSourceEntries(absRoot);
   } catch (err) {
-    // Source folder missing / unreadable / not a directory. Surface a
-    // warning and skip — don't fail the whole backup because one path
-    // is gone (the user may have removed an external drive mid-day).
+    const msg = err instanceof Error ? err.message : String(err);
+    // Android photo/video/folder sources: a failed listing (usually a missing media
+    // permission) must fail the run visibly. Skipping it would report a successful
+    // no-op backup with nothing uploaded.
+    if (isMediaSource(absRoot) || isTreeSource(absRoot)) {
+      throw new Error(`${sourceDisplayName(absRoot)}: ${msg}`);
+    }
+    // Desktop source folder missing / unreadable: skip it and keep the other folders.
     console.warn(`[backup.walker] failed to read ${absRoot}:`, err);
     return;
   }
+  console.log(`[backup.walker] ${absRoot}: ${entries.length} entries`);
 
   for (const entry of entries) {
     if (signal?.aborted) return;
