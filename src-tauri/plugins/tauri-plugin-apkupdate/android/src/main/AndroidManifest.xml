@@ -3,7 +3,7 @@
 
     <application>
         <provider
-            android:name="androidx.core.content.FileProvider"
+            android:name="com.teledrive.apkupdate.ApkUpdateFileProvider"
             android:authorities="${applicationId}.apkupdate.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
