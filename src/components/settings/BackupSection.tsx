@@ -33,6 +33,9 @@ import {
   Shield,
 } from "lucide-react";
 import { open as tauriOpenDialog } from "@tauri-apps/plugin-dialog";
+import { detectOS } from "@/lib/secure/deviceInfo";
+import { MEDIA_IMAGES_ROOT, MEDIA_VIDEOS_ROOT, sourceDisplayName } from "@/lib/backup/sourceNames";
+import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -71,6 +74,7 @@ function formatInterval(minutes: number): string {
 }
 
 const MAX_FOLDERS = 5;
+const IS_ANDROID = detectOS() === "android";
 const MAX_EXCLUDES = 20;
 
 export default function BackupSection() {
@@ -146,6 +150,35 @@ export default function BackupSection() {
     }
   }
 
+  /** Android: photos and videos come from MediaStore; other folders from the system folder picker. */
+  async function handleAddAndroidSource(
+    source: "photos" | "videos" | "downloads" | "documents" | "any",
+  ) {
+    if (paths.length >= MAX_FOLDERS) {
+      toast.warning(`At most ${MAX_FOLDERS} source folders.`);
+      return;
+    }
+    try {
+      if (source === "photos" || source === "videos") {
+        await invoke("storage_request_media");
+        const kind = source === "photos" ? "images" : "videos";
+        // Confirms access before saving: fails if the user denied the permission.
+        await invoke("storage_list_media", { kind });
+        addFolder(source === "photos" ? MEDIA_IMAGES_ROOT : MEDIA_VIDEOS_ROOT);
+        return;
+      }
+      const uri = await invoke<string>("storage_pick_folder", {
+        initial: source === "any" ? null : source,
+      });
+      addFolder(uri);
+    } catch (err) {
+      console.warn("[BackupSection] android source failed:", err);
+      toast.error("Could not add this source", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   async function handleAddFolder() {
     if (paths.length >= MAX_FOLDERS) {
       toast.warning(`At most ${MAX_FOLDERS} source folders.`);
@@ -205,7 +238,9 @@ export default function BackupSection() {
           Device Backup
         </h3>
         <p className="text-sm text-[#444746] dark:text-[#C4C7C5] mt-1">
-          Pick folders on this computer to automatically mirror to your private Telegram storage channel.
+          {IS_ANDROID
+            ? "Choose photos, videos, or folders on this phone to mirror to your private Telegram storage channel."
+            : "Pick folders on this computer to automatically mirror to your private Telegram storage channel."}
         </p>
       </div>
 
@@ -248,7 +283,7 @@ export default function BackupSection() {
                       className="flex-1 truncate font-mono text-[11px] text-[#1F1F1F] dark:text-[#E3E3E3]"
                       title={p}
                     >
-                      {p}
+                      {sourceDisplayName(p)}
                     </span>
                     <button
                       type="button"
@@ -262,16 +297,51 @@ export default function BackupSection() {
                 ))}
               </ul>
             )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleAddFolder}
-              disabled={paths.length >= MAX_FOLDERS}
-              className="rounded-full text-xs font-medium border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 h-9 px-4"
-            >
-              <FolderPlus className="h-3.5 w-3.5 mr-1.5 text-[#0B57D0] dark:text-[#A8C7FA]" />
-              Add folder
-            </Button>
+            {IS_ANDROID ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={paths.length >= MAX_FOLDERS}
+                    className="rounded-full text-xs font-medium border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 h-9 px-4"
+                  >
+                    <FolderPlus className="h-3.5 w-3.5 mr-1.5 text-[#0B57D0] dark:text-[#A8C7FA]" />
+                    Add source
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 rounded-2xl bg-white dark:bg-[#282A2C] border-slate-200 dark:border-slate-700 p-1.5 shadow-lg">
+                  {(
+                    [
+                      ["photos", "Photos"],
+                      ["videos", "Videos"],
+                      ["downloads", "Downloads folder"],
+                      ["documents", "Documents folder"],
+                      ["any", "Any folder…"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <DropdownMenuItem
+                      key={value}
+                      onSelect={() => handleAddAndroidSource(value)}
+                      className="rounded-xl text-xs font-medium cursor-pointer"
+                    >
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleAddFolder}
+                disabled={paths.length >= MAX_FOLDERS}
+                className="rounded-full text-xs font-medium border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 h-9 px-4"
+              >
+                <FolderPlus className="h-3.5 w-3.5 mr-1.5 text-[#0B57D0] dark:text-[#A8C7FA]" />
+                Add folder
+              </Button>
+            )}
           </div>
         </div>
       </div>

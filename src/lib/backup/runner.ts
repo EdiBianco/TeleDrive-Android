@@ -54,6 +54,7 @@ import {
   type BackupManifest,
 } from "./manifest";
 import { sanitizeFolderSegment, walkSourceFolders } from "./walker";
+import { sourceDisplayName } from "./sourceNames";
 import { detectOS, getDeviceName } from "../secure/deviceInfo";
 import { enqueueSave } from "../storage/indexQueue";
 import { isHardError } from "../telegram/rateLimit";
@@ -434,7 +435,9 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
     // pickSourceRoot returns the normalized form (forward-slashes, no
     // trailing slash) — same form buildRootDisplayNames stored the map
     // key under, so the lookup keys directly without re-normalizing.
-    const relUnderSource = stripPrefix(file.absPath, sourceRoot);
+    // The walker's relPath is relative to the source root for every source kind,
+    // including content:// URIs, where stripping the root from absPath would not work.
+    const relUnderSource = "/" + file.relPath.replace(/^\/+/, "");
     const sourceBasename = rootDisplayBasename.get(sourceRoot) ?? "";
     // Compute channel-side folder. relUnderSource starts with "/" so we
     // strip it; then take everything except the trailing filename segment.
@@ -734,7 +737,7 @@ function buildRootDisplayNames(roots: string[]): Map<string, string> {
   for (const r of roots) {
     const rn = r.replace(/\\/g, "/").replace(/\/$/, "");
     const parts = rn.split("/").filter(Boolean);
-    const base = parts[parts.length - 1] ?? "";
+    const base = sourceDisplayName(r);
     const display = sanitizeFolderSegment(base);
     // Two-collision prefix: parent basename + "-" + base. Edge case:
     // the root is "/" or has no parent (rare — user can't actually pick
@@ -751,13 +754,6 @@ function buildRootDisplayNames(roots: string[]): Map<string, string> {
   return map;
 }
 
-/** Strip a directory prefix, return the remainder with leading slash. */
-function stripPrefix(absPath: string, prefix: string): string {
-  const a = absPath.replace(/\\/g, "/");
-  const p = prefix.replace(/\\/g, "/").replace(/\/$/, "");
-  if (a === p) return "";
-  return a.startsWith(p + "/") ? a.slice(p.length) : a;
-}
 
 // Re-export for the React hook.
 export { emptyManifest };

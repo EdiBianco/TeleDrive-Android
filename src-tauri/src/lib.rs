@@ -4,6 +4,7 @@ use std::time::Duration;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_keepalive::KeepAliveExt;
+use tauri_plugin_storage::StorageExt;
 use tauri_plugin_keystore::KeystoreExt;
 use tokio::sync::Mutex as AsyncMutex;
 
@@ -464,13 +465,87 @@ async fn read_dir_recursive(path: String) -> Result<Vec<DirEntry>, String> {
 /// read. The Rust side runs with full filesystem access (Tauri's Rust
 /// commands are not subject to the JS plugin-fs scope), so this command
 /// works for any path the OS can read.
+/// Converts the storage plugin's `{ entries: [{ uri, relPath, size, mtimeMs }] }` into walker entries.
+fn storage_entries(value: serde_json::Value) -> Result<Vec<DirEntry>, String> {
+    let items = value
+        .get("entries")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "storage response missing entries".to_string())?;
+    Ok(items
+        .iter()
+        .map(|item| DirEntry {
+            abs_path: item["uri"].as_str().unwrap_or_default().to_string(),
+            rel_path: item["relPath"].as_str().unwrap_or_default().to_string(),
+            is_dir: false,
+            size: item["size"].as_u64().unwrap_or(0),
+            mtime_ms: item["mtimeMs"].as_u64().unwrap_or(0),
+        })
+        .collect())
+}
+
+/// Opens the Android folder picker. `initial` is "downloads", "documents", or null.
+#[tauri::command]
+async fn storage_pick_folder(app: AppHandle, initial: Option<String>) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.storage()
+            .pick_folder(initial.as_deref())
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("folder picker join failed: {e}"))?
+}
+
+/// Asks Android for photo and video access.
+#[tauri::command]
+async fn storage_request_media(app: AppHandle) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.storage().request_media().map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("permission request join failed: {e}"))?
+}
+
+/// Lists photos ("images") or videos ("videos") as backup source entries.
+#[tauri::command]
+async fn storage_list_media(app: AppHandle, kind: String) -> Result<Vec<DirEntry>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let value = app.storage().list_media(&kind).map_err(|e| e.to_string())?;
+        storage_entries(value)
+    })
+    .await
+    .map_err(|e| format!("media listing join failed: {e}"))?
+}
+
+/// Lists every file under a folder picked with `storage_pick_folder`.
+#[tauri::command]
+async fn storage_list_tree(app: AppHandle, uri: String) -> Result<Vec<DirEntry>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let value = app.storage().list_tree(&uri).map_err(|e| e.to_string())?;
+        storage_entries(value)
+    })
+    .await
+    .map_err(|e| format!("folder listing join failed: {e}"))?
+}
+
 #[tauri::command]
 async fn read_file_chunk(
+    app: AppHandle,
     path: String,
     offset: u64,
     length: u64,
 ) -> Result<tauri::ipc::Response, String> {
     use std::io::{Read, Seek, SeekFrom};
+    // Android content:// sources (photos, videos, SAF folders) are not filesystem paths.
+    if path.starts_with("content://") {
+        let bytes = tauri::async_runtime::spawn_blocking(move || {
+            app.storage()
+                .read_chunk(&path, offset, length)
+                .map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| format!("read_file_chunk join failed: {e}"))??;
+        return Ok(tauri::ipc::Response::new(bytes));
+    }
     let path_owned = path.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let mut file = std::fs::File::open(&path_owned)
@@ -557,6 +632,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_keystore::init())
         .plugin(tauri_plugin_keepalive::init())
+        .plugin(tauri_plugin_storage::init())
         .invoke_handler(tauri::generate_handler![
             greet,
             log_vault_state,
@@ -575,6 +651,10 @@ pub fn run() {
             read_file_chunk,
             write_file_binary,
             write_file_chunk,
+            storage_pick_folder,
+            storage_request_media,
+            storage_list_media,
+            storage_list_tree,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")

@@ -41,6 +41,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { BackupSourceFolders } from "./sourceFolders";
 import { directoryShouldBeExcluded, normalizeRelativePath, pathMatchesExclude } from "./sourceFolders";
 import { isJunkFile } from "../storage/fileSanitizer";
+import { isMediaSource, isTreeSource, MEDIA_VIDEOS_ROOT } from "./sourceNames";
 
 /** A single file produced by the walker. JS-side camelCase; downstream
  *  (manifest, runner) keys everything off `absPath` and `mtimeMs`. */
@@ -55,6 +56,18 @@ export interface WalkedFile {
  *  (Tauri does NOT convert snake_case ↔ camelCase on the wire). Used only
  *  at the IPC boundary — convert to `WalkedFile` (camelCase) before
  *  handing off to the rest of the pipeline. */
+/** Photos, videos, SAF folders, and desktop paths each come from a different command. */
+async function listSourceEntries(source: string): Promise<RustDirEntry[]> {
+  if (isMediaSource(source)) {
+    const kind = source === MEDIA_VIDEOS_ROOT ? "videos" : "images";
+    return invoke<RustDirEntry[]>("storage_list_media", { kind });
+  }
+  if (isTreeSource(source)) {
+    return invoke<RustDirEntry[]>("storage_list_tree", { uri: source });
+  }
+  return invoke<RustDirEntry[]>("read_dir_recursive", { path: source });
+}
+
 interface RustDirEntry {
   abs_path: string;
   rel_path: string;
@@ -110,7 +123,7 @@ async function walkOneFolder(
 ): Promise<void> {
   let entries: RustDirEntry[];
   try {
-    entries = await invoke<RustDirEntry[]>("read_dir_recursive", { path: absRoot });
+    entries = await listSourceEntries(absRoot);
   } catch (err) {
     // Source folder missing / unreadable / not a directory. Surface a
     // warning and skip — don't fail the whole backup because one path

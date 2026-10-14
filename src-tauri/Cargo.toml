@@ -33,6 +33,7 @@ tauri-plugin-shell = "2.3.5"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-keystore = { path = "plugins/tauri-plugin-keystore" }
 tauri-plugin-keepalive = { path = "plugins/tauri-plugin-keepalive" }
+tauri-plugin-storage = { path = "plugins/tauri-plugin-storage" }
 argon2 = "0.5.3"
 tokio = { version = "1", features = ["sync", "time"] }
 
