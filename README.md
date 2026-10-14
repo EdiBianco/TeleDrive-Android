@@ -246,4 +246,6 @@ We welcome community contributions to expand TeleDrive! Here is the workflow:
 
 TeleDrive is open-source software distributed under the terms of the **GNU GPL-3.0 License**. See the [LICENSE](LICENSE) file for details.
 
+This project is a modified version of [senapati484/teledrive](https://github.com/senapati484/teledrive). The original copyright notices are retained; modifications are made by EdiBianco and distributed under the same GPL-3.0 terms.
+
 *Disclaimer: This is a community-driven open-source project and is not affiliated, sponsored, or endorsed by Telegram FZ-LLC. Storing large volumes of files on Telegram might be subject to bandwidth quotas, account restrictions, and Terms of Service rules. Use responsibly.*
