@@ -4,7 +4,7 @@
 [![Tauri Version](https://img.shields.io/badge/Tauri-v2-orange.svg?style=flat&logo=tauri)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-v19-blue.svg?style=flat&logo=react)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind--CSS-v4-38bdf8.svg?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
-[![Platform Support](https://img.shields.io/badge/Platforms-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android-brightgreen.svg?style=flat)]()
+[![Platform Support](https://img.shields.io/badge/Platform-Android-brightgreen.svg?style=flat)]()
 
 TeleDrive is a modern, cross-platform, zero-overhead cloud storage application that transforms a **private Telegram channel** into your own **unlimited personal drive**. Built on top of **Tauri v2**, **React 19**, **Vite**, **Tailwind CSS v4**, and **GramJS**, it delivers a Google Drive-like interface for managing nested folder trees and streaming files directly to/from Telegram servers without intermediate relays or storage subscription costs.
 
@@ -33,7 +33,7 @@ TeleDrive is a modern, cross-platform, zero-overhead cloud storage application t
 ## 🌟 Core Features
 
 - **Unlimited Zero-Cost Storage**: Leverage Telegram's cloud hosting capabilities by utilizing a private, dedicated channel.
-- **Cross-Platform Native Experience**: Lightweight, native binaries compiled for **macOS**, **Windows**, **Linux**, and **Android** using Tauri v2.
+- **Cross-Platform Native Experience**: Lightweight, native binaries compiled for **Android** using Tauri v2.
 - **True Multi-Account Session Isolation**: Stores independent local vaults and folder catalogs keyed by telephone numbers. Seamlessly log out and switch accounts without clashing or data leakage.
 - **Client-Side MTProto Uploads/Downloads**: Utilizes GramJS direct connections. Your device speaks directly to Telegram API gateways; no third-party proxies, middleware, or servers see your files.
 - **Local Stronghold Credentials Vault**: Secures API credentials (`api_id`, `api_hash`) and active session tokens using Tauri's Software-encrypted vault (Argon2id KDF-derived keys bound to system profiles).
@@ -146,9 +146,7 @@ The folder and file tree structures are maintained using a standardized array of
 Ensure your system is equipped with the following toolchains before building:
 - **Rust & Cargo** (v1.78+): For compiling the Tauri Rust core backend. Install via [rustup.rs](https://rustup.rs/).
 - **Node.js** (v20.19+ or v22.12+): Required for compiling the React/Vite/Tailwind frontend pipeline.
-- **Xcode** (For macOS builds): Necessary command-line tools.
-- **Visual Studio Build Tools C++** (For Windows builds): Required for Tauri compilation.
-- **Android SDK & NDK** (Optional): Only required if packaging for Android devices.
+- **Android SDK & NDK**: Required for building the Android app.
 
 ### Acquiring Telegram API Keys
 
@@ -172,27 +170,12 @@ To instantiate a connection, you must register a custom application credentials 
    npm install
    ```
 
-3. **Start the desktop development server**:
-   ```bash
-   npm run tauri dev
-   ```
-
-4. **Start the Android emulator dev frame** (ensure an emulator is open):
+3. **Start the Android emulator dev frame** (ensure an emulator is open):
    ```bash
    npm run tauri android dev
    ```
 
 ### Compiling & Bundling for Production
-
-To create optimized native production installers for your current platform:
-```bash
-npm run tauri build
-```
-
-This compiles:
-- **macOS**: `.app` and `.dmg` installers in `src-tauri/target/release/bundle/dmg/`.
-- **Windows**: `.msi` and `.exe` packages in `src-tauri/target/release/bundle/msi/`.
-- **Linux**: `.deb` and `.AppImage` files in `src-tauri/target/release/bundle/deb/`.
 
 To build the Android `.apk` package:
 ```bash
@@ -202,7 +185,7 @@ npm run tauri android build
 ### Troubleshooting Common Issues
 
 - **Node.js version warning**: Vite and Tauri v2 require modern Node versions (20.19+ or 22.12+). Upgrade node using your local manager (e.g., `nvm install 22`).
-- **Stronghold vault compilation failure**: Ensure your C++ compilers are up-to-date and that you have installed standard tools. On Windows, verify that the "Desktop development with C++" workload is selected in the Visual Studio Installer.
+- **Stronghold vault compilation failure**: Ensure your C++ compilers are up-to-date and that you have installed standard tools.
 - **Connection timeouts**: Telegram rate limits connections. If you get connection warnings, check your internet connectivity. The client automatically includes exponential backoffs for handling Telegram rate limits.
 
 ---

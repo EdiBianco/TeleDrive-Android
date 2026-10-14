@@ -28,7 +28,6 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -40,33 +39,6 @@
     "category": "Utility",
     "shortDescription": "Fast, unlimited cloud storage powered by Telegram",
     "longDescription": "TeleDrive is a modern, cross-platform desktop cloud storage client leveraging the Telegram API for secure, fast, and free storage.",
-    "macOS": {
-      "minimumSystemVersion": "10.15",
-      "dmg": {
-        "windowSize": {
-          "width": 660,
-          "height": 400
-        }
-      }
-    },
-    "windows": {
-      "nsis": {
-        "languages": ["English"],
-        "displayLanguageSelector": false
-      },
-      "webviewInstallMode": {
-        "type": "downloadBootstrapper",
-        "silent": true
-      }
-    },
-    "linux": {
-      "deb": {
-        "depends": []
-      },
-      "appimage": {
-        "bundleMediaFramework": false
-      }
-    },
     "android": {
       "minSdkVersion": 24
     }

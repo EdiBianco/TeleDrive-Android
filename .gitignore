@@ -38,4 +38,3 @@ distribution/
 *.deb
 *.rpm
 release-dist/*
-!release-dist/build_dmg.sh

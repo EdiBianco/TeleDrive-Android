@@ -13,7 +13,7 @@ By contributing to this project, you agree to abide by the terms of the **GNU GP
 - If it's a new issue, open a bug report detailing:
   - Clear steps to reproduce the behavior.
   - Expected vs. actual results.
-  - Your operating system version (macOS, Windows, Linux, Android).
+  - Your operating system version (Android).
   - Relevant logs (e.g., contents of `app_data_dir/vault_state.log` or browser console errors).
 
 ### 2. Suggesting Enhancements
@@ -66,7 +66,7 @@ To maintain a clean and readable codebase, we require:
    ```
 3. **Start the dev server**:
    ```bash
-   npm run tauri dev
+   npm run tauri android dev
    ```
 
 ---
