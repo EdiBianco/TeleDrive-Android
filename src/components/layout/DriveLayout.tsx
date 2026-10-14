@@ -584,7 +584,7 @@ export default function DriveLayout() {
       )}
       
       {/* Topbar: Google Workspace styled */}
-      <header className="relative z-40 flex items-center justify-between px-4 h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] shrink-0 bg-background border-b md:border-b-0 border-slate-200/60 dark:border-slate-800/60 select-none">
+      <header className="relative z-40 flex items-center justify-between px-4 h-[calc(3.5rem+env(safe-area-inset-top))] md:h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] shrink-0 bg-background border-b md:border-b-0 border-slate-200/60 dark:border-slate-800/60 select-none">
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
           {isMobile && (
             <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>

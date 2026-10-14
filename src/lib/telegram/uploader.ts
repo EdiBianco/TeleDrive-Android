@@ -13,6 +13,8 @@ import { withTimeout } from "../storage/metadataStore";
 import { withTelegramRetry } from "./rateLimit";
 
 const CHUNK_SIZE = 512 * 1024; // 512KB recommended chunk size for Telegram
+// Parts in flight per file. One at a time made every 512KB wait a full round trip.
+const PART_CONCURRENCY = 3;
 const CHUNK_TIMEOUT_MS = 20_000;
 const SENDFILE_TIMEOUT_MS = 30_000;
 
@@ -60,8 +62,9 @@ export async function uploadFileToTelegram(
   const isPathInput = typeof filePathOrFile === "string";
 
   try {
-    // Upload chunks sequentially
-    for (let partIndex = 0; partIndex < totalParts; partIndex++) {
+    let nextPart = 0;
+    let uploadedBytes = 0;
+    const uploadPart = async (partIndex: number): Promise<void> => {
       const start = partIndex * CHUNK_SIZE;
       const end = Math.min(start + CHUNK_SIZE, fileSize);
       const currentChunkSize = end - start;
@@ -136,9 +139,19 @@ export async function uploadFileToTelegram(
           : undefined,
       );
       
-      // Update progress
-      onProgress?.(end, fileSize);
-    }
+      uploadedBytes += currentChunkSize;
+      onProgress?.(uploadedBytes, fileSize);
+    };
+
+    const worker = async (): Promise<void> => {
+      while (nextPart < totalParts) {
+        const partIndex = nextPart++;
+        await uploadPart(partIndex);
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(PART_CONCURRENCY, totalParts) }, () => worker()),
+    );
     
     // Finalize upload inside Telegram
     let inputFile: Api.TypeInputFile;
