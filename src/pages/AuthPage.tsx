@@ -315,7 +315,7 @@ export default function AuthPage() {
       setStep("otp");
       toast.success("Verification code sent to your Telegram!");
     } catch (err: any) {
-      console.error("Send code failed:", err);
+      console.error("Send code failed");
       setError(err.message || "Failed to send code. Make sure the country code is correct.");
     } finally {
       setLoading(false);
@@ -378,7 +378,7 @@ export default function AuthPage() {
         }
       }
     } catch (err: any) {
-      console.error("OTP verification failed:", err);
+      console.error("OTP verification failed");
       setError(err.message || "Invalid verification code.");
       setOtp(["", "", "", "", ""]);
       otpRefs[0].current?.focus();
@@ -395,13 +395,17 @@ export default function AuthPage() {
     setLoading(true);
     setError(null);
 
+    // Move the password out of React state before any network call; the local copy lives only in this handler.
+    const cloudPassword = password;
+    setPassword("");
+
     try {
       const client = getClient();
       const passwordConfig = await client.invoke(new Api.account.GetPassword());
 
       // safeComputeCheck handles all Buffer polyfill issues across platforms
       // (macOS, Windows WebView2, Linux). See src/lib/telegram/srp-helper.ts.
-      const srpResult = await safeComputeCheck(passwordConfig as any, password);
+      const srpResult = await safeComputeCheck(passwordConfig as any, cloudPassword);
 
       await client.invoke(
         new Api.auth.CheckPassword({ password: srpResult })
@@ -409,7 +413,7 @@ export default function AuthPage() {
 
       await completeAuthentication(client);
     } catch (err: any) {
-      console.error("2FA Verification failed:", err);
+      console.error("2FA Verification failed");
       const msg = err.message || "";
       // Translate raw Telegram errors into user-friendly messages
       if (msg.includes("FLOOD_WAIT")) {
@@ -436,14 +440,14 @@ export default function AuthPage() {
     try {
       await invoke("save_session", { session: sessionString, phone: phone.trim() });
     } catch (saveErr) {
-      console.error("save_session (Rust) failed:", saveErr);
+      console.error("save_session (Rust) failed");
     }
 
     try {
       await saveSecret(VAULT_KEY_SESSION, sessionString);
       await saveSecret(VAULT_KEY_PHONE, phone.trim());
     } catch (vaultErr) {
-      console.warn("Stronghold saveSecret failed (non-fatal):", vaultErr);
+      console.warn("Vault saveSecret failed (non-fatal)");
     }
 
     setStep("bootstrap");
@@ -455,7 +459,7 @@ export default function AuthPage() {
       setSession(sessionString, phone.trim());
       navigate("/drive/my-drive");
     } catch (err: any) {
-      console.error("Bootstrap failed:", err);
+      console.error("Bootstrap failed");
       setBootstrapError(err.message || "Failed to bootstrap storage channel. Please retry.");
     }
   };
