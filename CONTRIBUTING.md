@@ -9,7 +9,7 @@ By contributing to this project, you agree to abide by the terms of the **GNU GP
 ## 🗺️ How Can I Contribute?
 
 ### 1. Reporting Bugs
-- Search the [Issues](https://github.com/senapati484/teledrive/issues) tracker first to ensure the bug hasn't already been reported.
+- Search the [Issues](https://github.com/EdiBianco/teledrive/issues) tracker first to ensure the bug hasn't already been reported.
 - If it's a new issue, open a bug report detailing:
   - Clear steps to reproduce the behavior.
   - Expected vs. actual results.

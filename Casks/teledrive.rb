@@ -9,7 +9,7 @@ cask "teledrive" do
   homepage "https://teledrive.space"
 
   livecheck do
-    url "https://github.com/senapati484/teledrive/releases"
+    url "https://github.com/EdiBianco/teledrive/releases"
     strategy :github_latest
   end
 

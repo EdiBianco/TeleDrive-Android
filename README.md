@@ -163,7 +163,7 @@ To instantiate a connection, you must register a custom application credentials 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/senapati484/teledrive.git
+   git clone https://github.com/EdiBianco/teledrive.git
    cd teledrive
    ```
 
@@ -244,6 +244,6 @@ We welcome community contributions to expand TeleDrive! Here is the workflow:
 
 ## 📜 License & Disclaimer
 
-TeleDrive is open-source software distributed under the terms of the **GNU GPL-3.0 License**. See the [LICENSE](file:///Users/sayansenapati/Desktop/Dev/Innovation/teledrive/LICENSE) file for details.
+TeleDrive is open-source software distributed under the terms of the **GNU GPL-3.0 License**. See the [LICENSE](LICENSE) file for details.
 
 *Disclaimer: This is a community-driven open-source project and is not affiliated, sponsored, or endorsed by Telegram FZ-LLC. Storing large volumes of files on Telegram might be subject to bandwidth quotas, account restrictions, and Terms of Service rules. Use responsibly.*

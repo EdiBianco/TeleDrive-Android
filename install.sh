@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
 # TeleDrive - Universal 1-Line Installer for macOS & Linux
-# https://github.com/senapati484/teledrive
+# https://github.com/EdiBianco/teledrive
 # ==============================================================================
 
 set -e
@@ -22,7 +22,7 @@ echo ""
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 
-LATEST_RELEASE="https://github.com/senapati484/teledrive/releases/latest/download"
+LATEST_RELEASE="https://github.com/EdiBianco/teledrive/releases/latest/download"
 SF_DOWNLOAD="https://downloads.sourceforge.net/project/teledrive/v0.1.1"
 
 if [ "$OS" = "Darwin" ]; then
