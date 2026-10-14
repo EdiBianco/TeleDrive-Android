@@ -58,7 +58,17 @@ const INTERVAL_PRESETS: Array<{
   { value: "6h", label: "Every 6 hours", minutes: 360 },
   { value: "12h", label: "Every 12 hours", minutes: 720 },
   { value: "24h", label: "Every 24 hours", minutes: 1440 },
+  { value: "custom", label: "Custom interval…", minutes: null },
 ];
+
+const MIN_CUSTOM_MINUTES = 15;
+const MAX_CUSTOM_MINUTES = 10080;
+
+function formatInterval(minutes: number): string {
+  if (minutes % 1440 === 0) return `${minutes / 1440} day${minutes === 1440 ? "" : "s"}`;
+  if (minutes % 60 === 0) return `${minutes / 60} hour${minutes === 60 ? "" : "s"}`;
+  return `${minutes} min`;
+}
 
 const MAX_FOLDERS = 5;
 const MAX_EXCLUDES = 20;
@@ -96,9 +106,34 @@ export default function BackupSection() {
   const isRunning = scheduleIsRunning || runnerIsRunning;
 
   const currentPreset =
-    INTERVAL_PRESETS.find((p) => p.minutes === intervalMinutes)?.value ?? "off";
+    INTERVAL_PRESETS.find((p) => p.minutes === intervalMinutes)?.value ??
+    (intervalMinutes ? "custom" : "off");
+
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customDraft, setCustomDraft] = useState("");
+
+  async function applyCustomInterval() {
+    const minutes = Number(customDraft);
+    if (!Number.isInteger(minutes) || minutes < MIN_CUSTOM_MINUTES || minutes > MAX_CUSTOM_MINUTES) {
+      toast.warning(`Enter a whole number of minutes from ${MIN_CUSTOM_MINUTES} to ${MAX_CUSTOM_MINUTES}.`);
+      return;
+    }
+    try {
+      await setIntervalMinutes(minutes);
+      setCustomOpen(false);
+    } catch (err) {
+      console.warn("[BackupSection] custom interval failed:", err);
+      toast.error("Could not save the interval");
+    }
+  }
 
   async function handleChange(value: string) {
+    if (value === "custom") {
+      setCustomDraft(intervalMinutes ? String(intervalMinutes) : "");
+      setCustomOpen(true);
+      return;
+    }
+    setCustomOpen(false);
     const preset = INTERVAL_PRESETS.find((p) => p.value === value);
     if (!preset) return;
     setPendingInterval(value);
@@ -159,7 +194,9 @@ export default function BackupSection() {
     : "Never";
 
   const currentLabel =
-    INTERVAL_PRESETS.find((p) => p.value === currentPreset)?.label ?? "Off";
+    currentPreset === "custom" && intervalMinutes
+      ? `Every ${formatInterval(intervalMinutes)}`
+      : INTERVAL_PRESETS.find((p) => p.value === currentPreset)?.label ?? "Off";
 
   return (
     <div className="space-y-6 select-none">
@@ -374,6 +411,28 @@ export default function BackupSection() {
                   })}
                 </DropdownMenuContent>
               </DropdownMenu>
+              {customOpen && (
+                <div className="mt-3 flex items-center gap-2">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={MIN_CUSTOM_MINUTES}
+                    max={MAX_CUSTOM_MINUTES}
+                    value={customDraft}
+                    onChange={(e) => setCustomDraft(e.target.value)}
+                    placeholder="Minutes"
+                    className="h-10 w-28 rounded-full border border-slate-300 dark:border-slate-600 bg-transparent px-4 text-sm"
+                  />
+                  <span className="text-xs text-[#747775]">minutes (15 to 10080)</span>
+                  <Button
+                    size="sm"
+                    onClick={applyCustomInterval}
+                    className="rounded-full h-10 px-4 text-xs font-medium cursor-pointer"
+                  >
+                    Apply
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

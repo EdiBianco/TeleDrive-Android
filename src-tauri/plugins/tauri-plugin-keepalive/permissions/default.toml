@@ -1,0 +1,3 @@
+[default]
+description = "No JavaScript-callable commands; the app starts and stops the service from Rust only"
+permissions = []

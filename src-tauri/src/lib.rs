@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_keepalive::KeepAliveExt;
 use tauri_plugin_keystore::KeystoreExt;
 use tokio::sync::Mutex as AsyncMutex;
 
@@ -311,9 +312,16 @@ async fn start_backup_scheduler(app: AppHandle, interval_minutes: u64) -> Result
 
     let mut guard = handle_slot().lock().await;
     *guard = Some(handle);
+    drop(guard);
     log_vault_state(format!(
         "BACKUP_SCHEDULER_START interval_minutes={interval_minutes}"
     ));
+    // Keep the process alive so the timer keeps running with the app in the background.
+    // Starting a foreground service fails if the app is not in the foreground; the timer
+    // still runs while the app is open, so log and continue.
+    if let Err(err) = app.keepalive().start() {
+        log_vault_state(format!("BACKUP_KEEPALIVE_START_FAILED {err}"));
+    }
     Ok(())
 }
 
@@ -325,13 +333,17 @@ async fn stop_backup_scheduler(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-async fn stop_backup_scheduler_internal(_app: &AppHandle) {
+async fn stop_backup_scheduler_internal(app: &AppHandle) {
     let mut guard = handle_slot().lock().await;
     if let Some(handle) = guard.take() {
         // tauri::async_runtime::JoinHandle has an inherent .abort() that
         // delegates to the underlying Tokio handle. We always spawn on
         // Tokio (via tauri::async_runtime::spawn), so this is safe.
         handle.abort();
+    }
+    drop(guard);
+    if let Err(err) = app.keepalive().stop() {
+        log_vault_state(format!("BACKUP_KEEPALIVE_STOP_FAILED {err}"));
     }
 }
 
@@ -544,6 +556,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_keystore::init())
+        .plugin(tauri_plugin_keepalive::init())
         .invoke_handler(tauri::generate_handler![
             greet,
             log_vault_state,

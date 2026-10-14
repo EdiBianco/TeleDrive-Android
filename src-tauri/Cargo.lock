@@ -4409,6 +4409,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-keepalive"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "tauri-plugin-keystore"
 version = "0.1.0"
 dependencies = [
@@ -4603,6 +4614,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
+ "tauri-plugin-keepalive",
  "tauri-plugin-keystore",
  "tauri-plugin-opener",
  "tauri-plugin-process",
