@@ -3,6 +3,8 @@ import { getClient } from "../telegram/client";
 import { TeleFile } from "../types";
 import { useFileStore } from "../../stores/fileStore";
 import { enqueueSave } from "./indexQueue";
+import { INDEX_VERSION, unpackIndexChunk } from "./indexFormat";
+import { guessMimeFromName } from "../backup/manifest";
 import { filterJunkFiles } from "./fileSanitizer";
 
 // ---------------------------------------------------------------------------
@@ -412,7 +414,7 @@ export interface ParsedIndexChunk {
  * Parses a list of Telegram messages into ParsedIndexChunk records.
  * Filters out non-index messages and malformed chunks.
  */
-function parseIndexMessages(messages: any[]): ParsedIndexChunk[] {
+function parseIndexMessages(messages: any[], channelId = ""): ParsedIndexChunk[] {
   const indexMsgs = messages
     .filter((m: any) => m?.text?.includes("teledrive_index"))
     .sort((a: any, b: any) => a.id - b.id);
@@ -420,16 +422,20 @@ function parseIndexMessages(messages: any[]): ParsedIndexChunk[] {
   for (const msg of indexMsgs) {
     try {
       const data = JSON.parse(msg.text || "");
+      const compact = data?.version === INDEX_VERSION && typeof data?.data === "string";
       if (
         data &&
-        Array.isArray(data.files) &&
+        (compact || Array.isArray(data.files)) &&
         typeof data.chunkIndex === "number" &&
         typeof data.totalChunks === "number" &&
         data.totalChunks > 0 &&
         data.chunkIndex >= 0 &&
         data.chunkIndex < data.totalChunks
       ) {
-        const files = (data.files as TeleFile[]).filter((f) => f?.id);
+        // v3 chunks carry compressed rows; v1 chunks (older app versions) carry TeleFile objects.
+        const files = compact
+          ? unpackIndexChunk(data.data, channelId, guessMimeFromName).filter((f) => f?.id)
+          : (data.files as TeleFile[]).filter((f) => f?.id);
         parsed.push({
           msgId: Number(msg.id),
           chunkIndex: data.chunkIndex,
@@ -507,9 +513,10 @@ export function findMostRecentCoherentEpoch(
  * logic to identify the current "live" index for edit/delete targets.
  */
 export function pickCoherentIndexSet(
-  messages: any[]
+  messages: any[],
+  channelId = ""
 ): ParsedIndexChunk[] | null {
-  const parsed = parseIndexMessages(messages);
+  const parsed = parseIndexMessages(messages, channelId);
   if (parsed.length === 0) return null;
 
   const byTotal = new Map<number, ParsedIndexChunk[]>();
@@ -606,13 +613,13 @@ export async function loadIndex(channelId: string): Promise<TeleFile[]> {
     return [];
   }
 
-  const chosenSet = pickCoherentIndexSet(allMsgs);
+  const chosenSet = pickCoherentIndexSet(allMsgs, channelId);
   if (!chosenSet) {
     console.warn(
       `[metadataStore] No coherent index set found across ${allMsgs.length} message(s); falling back to best-effort merge.`
     );
     // Best-effort: dedup by file id across ALL parsed chunks.
-    const allParsed = parseIndexMessages(allMsgs);
+    const allParsed = parseIndexMessages(allMsgs, channelId);
     const byId = new Map<string, TeleFile>();
     for (const c of allParsed) {
       for (const f of c.files) byId.set(f.id, f);
@@ -714,7 +721,7 @@ export async function loadIndexIncremental(
   // Track the high-water mark across this slice.
   const highestMsgId = fresh.reduce((m: number, x: any) => Math.max(m, x.id), sinceMsgId);
 
-  const chosenSet = pickCoherentIndexSet(fresh);
+  const chosenSet = pickCoherentIndexSet(fresh, channelId);
   if (!chosenSet) {
     // No coherent epoch in the new slice — could be a partial save. The
     // caller will re-poll; we don't try to reconstruct. Returning an empty

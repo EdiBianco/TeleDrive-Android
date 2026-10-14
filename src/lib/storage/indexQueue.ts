@@ -37,9 +37,8 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 
 import type { TeleFile } from "../types";
+import { INDEX_VERSION, packIndexChunks } from "./indexFormat";
 
-/** CHUNK_SIZE must stay under Telegram's 4096-char message limit. */
-const CHUNK_SIZE = 10;
 /** Fetch + edit + pin timeouts (ms). */
 const FETCH_TIMEOUT_MS = 5000;
 const EDIT_TIMEOUT_MS = 8000;
@@ -347,11 +346,8 @@ class ChannelQueue {
       throw err; // Already classified upstream as transient or hard.
     }
 
-    const chunks: TeleFile[][] = [];
-    for (let i = 0; i < state.length; i += CHUNK_SIZE) {
-      chunks.push(state.slice(i, i + CHUNK_SIZE));
-    }
-    if (chunks.length === 0) chunks.push([]);
+    // Compact, compressed chunks (see indexFormat.ts). Each chunk decodes on its own.
+    const chunks: string[] = packIndexChunks(state);
 
     // 1. Find the "current" existing index set — the messages we should edit
     //    or delete. This must use the SAME coherent-set selection logic as
@@ -457,10 +453,10 @@ class ChannelQueue {
         for (let i = 0; i < chunks.length; i++) {
           const payload = {
             teledrive_index: true,
-            version: 1,
+            version: INDEX_VERSION,
             chunkIndex: i,
             totalChunks: chunks.length,
-            files: chunks[i],
+            data: chunks[i],
           };
           const text = JSON.stringify(payload);
 
@@ -576,10 +572,10 @@ class ChannelQueue {
     for (let i = 0; i < chunks.length; i++) {
       const payload = {
         teledrive_index: true,
-        version: 1,
+        version: INDEX_VERSION,
         chunkIndex: i,
         totalChunks: chunks.length,
-        files: chunks[i],
+        data: chunks[i],
       };
       const text = JSON.stringify(payload);
 
