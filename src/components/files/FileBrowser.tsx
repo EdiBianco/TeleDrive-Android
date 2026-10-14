@@ -825,7 +825,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
       {/* File Browser Header Toolbar: Google Drive style */}
       <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between border-b border-slate-200/70 dark:border-slate-800/60 pb-2 md:gap-3 md:pb-3 shrink-0">
         <div className="space-y-0.5 md:space-y-1">
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-[#1f1f1f] dark:text-[#e3e3e3]">
+          <h1 className="text-2xl font-semibold tracking-tight text-[#1f1f1f] dark:text-[#e3e3e3]">
             {headerTitle}
           </h1>
           {(mode === "drive" || mode === "backups") && breadcrumbs.length > 0 && (
@@ -918,19 +918,6 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
             </Button>
           )}
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-            className="h-9 w-9 rounded-full hover:bg-[#e9eef6] dark:hover:bg-[#282a2c] text-[#444746] dark:text-[#c4c7c5] cursor-pointer"
-            title={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
-          >
-            {viewMode === "grid" ? (
-              <List className="h-4.5 w-4.5" />
-            ) : (
-              <Grid className="h-4.5 w-4.5" />
-            )}
-          </Button>
         </div>
       </div>
 
@@ -1014,6 +1001,19 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+              className="h-8 w-8 rounded-full hover:bg-[#e9eef6] dark:hover:bg-[#282a2c] text-[#444746] dark:text-[#c4c7c5] cursor-pointer"
+              title={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+            >
+              {viewMode === "grid" ? (
+                <List className="h-4.5 w-4.5" />
+              ) : (
+                <Grid className="h-4.5 w-4.5" />
+              )}
+            </Button>
         </div>
       </div>
 
