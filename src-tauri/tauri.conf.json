@@ -1,0 +1,74 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "TeleDrive",
+  "mainBinaryName": "TeleDrive",
+  "version": "0.1.1",
+  "identifier": "com.teledrive.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "TeleDrive",
+        "title": "TeleDrive",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 375,
+        "minHeight": 600,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' tauri: localhost: http://localhost:1420 http://127.0.0.1:1420; script-src 'self' 'unsafe-eval' 'unsafe-inline' localhost: https://checkout.razorpay.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://*.telegram.org; media-src 'self' blob: data: https://*.telegram.org; connect-src 'self' wss://*.telegram.org https://*.telegram.org ws://localhost:1420 ws://127.0.0.1:1420 http://localhost:1420 http://127.0.0.1:1420 http://localhost:3000 http://127.0.0.1:3000 https://api.razorpay.com https://lumberjack.razorpay.com;"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "copyright": "Copyright © 2026 TeleDrive. All rights reserved.",
+    "category": "Utility",
+    "shortDescription": "Fast, unlimited cloud storage powered by Telegram",
+    "longDescription": "TeleDrive is a modern, cross-platform desktop cloud storage client leveraging the Telegram API for secure, fast, and free storage.",
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "dmg": {
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        }
+      }
+    },
+    "windows": {
+      "nsis": {
+        "languages": ["English"],
+        "displayLanguageSelector": false
+      },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    },
+    "android": {
+      "minSdkVersion": 24
+    }
+  }
+}

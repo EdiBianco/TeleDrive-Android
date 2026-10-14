@@ -1,0 +1,3 @@
+const { getFileCategory, getFileIconType } = require("../src/lib/files/fileUtils.ts");
+// Wait, this is TS, we can't run it directly with node without ts-node or transpiling.
+// Let's write a quick pure JS test mimicking the exact logic.

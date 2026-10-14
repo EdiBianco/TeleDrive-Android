@@ -1,0 +1,601 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-surface: var(--surface);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --color-brand-50: #e8f0fe;
+  --color-brand-100: #d2e3fc;
+  --color-brand-200: #a8c7fa;
+  --color-brand-300: #7cacf8;
+  --color-brand-400: #4c8df6;
+  --color-brand-500: #0b57d0; /* Google Drive blue (#0B57D0 / #1A73E8) */
+  --color-brand-600: #0842a0;
+  --color-brand-700: #063177;
+  --color-brand-800: #042150;
+  --color-brand-900: #031535;
+  --color-brand-950: #010a1b;
+  --sidebar-width: var(--sidebar-width);
+}
+
+:root {
+  /* Google Drive Light Theme Tokens */
+  --background: #f8fafd;            /* Google Drive ambient canvas */
+  --foreground: #1f1f1f;            /* Google Material on-surface */
+  --surface: #ffffff;               /* File list container sheet */
+  --card: #ffffff;
+  --card-foreground: #1f1f1f;
+  --popover: #ffffff;
+  --popover-foreground: #1f1f1f;
+  --primary: #0b57d0;               /* Signature Google Drive blue */
+  --primary-foreground: #ffffff;
+  --secondary: #edf2fc;             /* Google Drive light pill / search */
+  --secondary-foreground: #041e49;
+  --muted: #f0f4f9;                 /* Soft neutral container */
+  --muted-foreground: #444746;      /* Material 3 on-surface-variant */
+  --accent: #c2e7ff;                /* Active navigation pill light blue */
+  --accent-foreground: #001d35;      /* Deep navy ink on active pill */
+  --destructive: #b3261e;
+  --border: #e0e3e7;
+  --input: #edf2fc;
+  --ring: #0b57d0;
+  --chart-1: #0b57d0;
+  --chart-2: #1e8e3e;
+  --chart-3: #f9ab00;
+  --chart-4: #d93025;
+  --chart-5: #a142f4;
+  --radius: 0.75rem;
+
+  --sidebar: #f8fafd;
+  --sidebar-foreground: #1f1f1f;
+  --sidebar-primary: #0b57d0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #c2e7ff;
+  --sidebar-accent-foreground: #001d35;
+  --sidebar-border: transparent;
+  --sidebar-ring: #0b57d0;
+
+  --sidebar-width: 256px;
+  --topbar-height: 64px;
+  --mobile-nav-height: 56px;
+}
+
+.dark {
+  /* Google Drive Dark Theme Tokens */
+  --background: #131314;            /* Google Dark Canvas */
+  --foreground: #e3e3e3;            /* Google Dark on-surface */
+  --surface: #1e1f20;               /* File list container dark sheet */
+  --card: #1e1f20;
+  --card-foreground: #e3e3e3;
+  --popover: #282a2c;
+  --popover-foreground: #e3e3e3;
+  --primary: #a8c7fa;               /* Google Blue Dark variant */
+  --primary-foreground: #003258;
+  --secondary: #282a2c;
+  --secondary-foreground: #c4c7c5;
+  --muted: #282a2c;
+  --muted-foreground: #c4c7c5;
+  --accent: #004a77;                /* Google active dark blue pill */
+  --accent-foreground: #c2e7ff;
+  --destructive: #f2b8b5;
+  --border: #2d2f31;
+  --input: #282a2c;
+  --ring: #a8c7fa;
+  --chart-1: #a8c7fa;
+  --chart-2: #81c995;
+  --chart-3: #fdd663;
+  --chart-4: #f28b82;
+  --chart-5: #d7aefb;
+
+  --sidebar: #131314;
+  --sidebar-foreground: #e3e3e3;
+  --sidebar-primary: #a8c7fa;
+  --sidebar-primary-foreground: #003258;
+  --sidebar-accent: #004a77;
+  --sidebar-accent-foreground: #c2e7ff;
+  --sidebar-border: transparent;
+  --sidebar-ring: #a8c7fa;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+
+  /* Google Drive subtle custom scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #dadce0;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #bdc1c6;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: #3c4043;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #5f6368;
+  }
+
+  ::selection {
+    background: #c2e7ff;
+    color: #001d35;
+  }
+  .dark ::selection {
+    background: #004a77;
+    color: #c2e7ff;
+  }
+}
+
+@keyframes slideUpFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up-fade {
+  animation: slideUpFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.99); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes folderDropBadge {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.72);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+.animate-folder-drop-badge {
+  animation: folderDropBadge 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Custom Drag and Drop helper: disable pointer events on children during drags to avoid relatedTarget null bugs in WebKit/Tauri */
+.dragging-active [data-folder-id] *,
+.dragging-active .pointer-events-none-children * {
+  pointer-events: none !important;
+}
+
+/* Enable native dragging in WebKit/Tauri and disable default dragging on images/SVGs */
+[draggable="true"] {
+  -webkit-user-drag: element !important;
+}
+
+img, svg {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+/* ==========================================================================
+   TeleDrive Rich Document & Markdown Engine Styling
+   ========================================================================== */
+.teledrive-markdown-body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.72;
+  word-break: break-word;
+}
+
+.teledrive-markdown-body h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin-top: 1.6em;
+  margin-bottom: 0.6em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: -0.02em;
+  color: inherit;
+}
+
+.teledrive-markdown-body h1:first-child {
+  margin-top: 0;
+}
+
+.teledrive-markdown-body h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: -0.015em;
+  color: inherit;
+}
+
+.teledrive-markdown-body h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+  color: inherit;
+}
+
+.teledrive-markdown-body h4,
+.teledrive-markdown-body h5,
+.teledrive-markdown-body h6 {
+  font-size: 1em;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.4em;
+  color: inherit;
+}
+
+.teledrive-markdown-body p {
+  margin-top: 0;
+  margin-bottom: 1.1em;
+}
+
+.teledrive-markdown-body ul {
+  list-style-type: disc;
+  margin-top: 0.4em;
+  margin-bottom: 1.1em;
+  padding-left: 1.75em;
+}
+
+.teledrive-markdown-body ol {
+  list-style-type: decimal;
+  margin-top: 0.4em;
+  margin-bottom: 1.1em;
+  padding-left: 1.75em;
+}
+
+.teledrive-markdown-body li {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.teledrive-markdown-body li > p {
+  margin-bottom: 0.4em;
+}
+
+.teledrive-markdown-body blockquote {
+  margin: 1.2em 0;
+  padding: 0.6em 1.25em;
+  border-left: 4px solid #0b57d0;
+  background: rgba(11, 87, 208, 0.05);
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+:is(.dark) .teledrive-markdown-body blockquote {
+  border-left-color: #a8c7fa;
+  background: rgba(168, 199, 250, 0.06);
+}
+
+.teledrive-markdown-body code {
+  font-family: 'Geist Mono', 'Fira Code', 'JetBrains Mono', monospace;
+  font-size: 0.88em;
+  padding: 0.2em 0.45em;
+  border-radius: 0.375rem;
+  background: rgba(100, 116, 139, 0.12);
+  border: 1px solid rgba(100, 116, 139, 0.2);
+}
+
+.teledrive-markdown-body pre {
+  margin: 1.3em 0;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  background: #f8fafd;
+  border: 1px solid var(--border);
+}
+:is(.dark) .teledrive-markdown-body pre {
+  background: #18191a;
+  border-color: #333537;
+}
+
+.teledrive-markdown-body pre code {
+  font-size: 0.9em;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.teledrive-markdown-body hr {
+  margin: 2em 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.teledrive-markdown-body table {
+  width: 100%;
+  margin: 1.4em 0;
+  border-collapse: collapse;
+  font-size: 0.92em;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.teledrive-markdown-body th {
+  padding: 0.65em 1em;
+  font-weight: 600;
+  text-align: left;
+  background: rgba(100, 116, 139, 0.08);
+  border: 1px solid var(--border);
+}
+
+.teledrive-markdown-body td {
+  padding: 0.6em 1em;
+  border: 1px solid var(--border);
+}
+
+.teledrive-markdown-body tr:nth-child(even) td {
+  background: rgba(100, 116, 139, 0.03);
+}
+
+.teledrive-markdown-body a {
+  color: #0b57d0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+:is(.dark) .teledrive-markdown-body a {
+  color: #a8c7fa;
+}
+
+.teledrive-markdown-body img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+  margin: 1em 0;
+}
+
+/* ==========================================================================
+   TeleDrive / Google Drive Impeccable Toast Notification System
+   ========================================================================== */
+
+[data-sonner-toaster] {
+  font-family: var(--font-sans) !important;
+  z-index: 99999 !important;
+}
+
+[data-sonner-toast].teledrive-toast {
+  padding: 12px 16px !important;
+  border-radius: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 320px !important;
+  max-width: 440px !important;
+  font-family: var(--font-sans) !important;
+  
+  /* Light mode: crisp porcelain card with glassmorphism and subtle elevation */
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.1),
+              0 4px 8px -2px rgba(15, 23, 42, 0.04),
+              0 0 0 1px rgba(0, 0, 0, 0.02) !important;
+  color: #1f1f1f !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Dark mode toast styling */
+:is(.dark) [data-sonner-toast].teledrive-toast,
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast].teledrive-toast {
+  background: rgba(30, 31, 32, 0.96) !important;
+  border: 1px solid rgba(60, 64, 67, 0.8) !important;
+  box-shadow: 0 14px 36px -4px rgba(0, 0, 0, 0.55),
+              0 6px 14px -2px rgba(0, 0, 0, 0.3),
+              0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+  color: #f1f3f4 !important;
+}
+
+/* Icon container reset so custom icon badge isn't crushed to 16px */
+[data-sonner-toast].teledrive-toast [data-icon] {
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+/* Toast content container */
+[data-sonner-toast].teledrive-toast [data-content] {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+/* Toast title typography */
+[data-sonner-toast].teledrive-toast .teledrive-toast-title,
+[data-sonner-toast].teledrive-toast [data-title] {
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.01em !important;
+  color: #1f1f1f !important;
+}
+
+:is(.dark) [data-sonner-toast].teledrive-toast .teledrive-toast-title,
+:is(.dark) [data-sonner-toast].teledrive-toast [data-title],
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast].teledrive-toast [data-title] {
+  color: #f1f3f4 !important;
+}
+
+/* Toast description typography with high contrast */
+[data-sonner-toast].teledrive-toast .teledrive-toast-description,
+[data-sonner-toast].teledrive-toast [data-description] {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 1.45 !important;
+  color: #444746 !important;
+}
+
+:is(.dark) [data-sonner-toast].teledrive-toast .teledrive-toast-description,
+:is(.dark) [data-sonner-toast].teledrive-toast [data-description],
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast].teledrive-toast [data-description] {
+  color: #c4c7c5 !important;
+}
+
+/* Type-specific border glows */
+[data-sonner-toast][data-type="success"].teledrive-toast {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+:is(.dark) [data-sonner-toast][data-type="success"].teledrive-toast {
+  border-color: rgba(16, 185, 129, 0.45) !important;
+}
+
+[data-sonner-toast][data-type="error"].teledrive-toast {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+:is(.dark) [data-sonner-toast][data-type="error"].teledrive-toast {
+  border-color: rgba(239, 68, 68, 0.45) !important;
+}
+
+[data-sonner-toast][data-type="warning"].teledrive-toast {
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+:is(.dark) [data-sonner-toast][data-type="warning"].teledrive-toast {
+  border-color: rgba(245, 158, 11, 0.45) !important;
+}
+
+[data-sonner-toast][data-type="info"].teledrive-toast,
+[data-sonner-toast][data-type="loading"].teledrive-toast {
+  border-color: rgba(11, 87, 208, 0.35) !important;
+}
+:is(.dark) [data-sonner-toast][data-type="info"].teledrive-toast,
+:is(.dark) [data-sonner-toast][data-type="loading"].teledrive-toast {
+  border-color: rgba(168, 199, 250, 0.4) !important;
+}
+
+/* Elegant close button */
+[data-sonner-toast].teledrive-toast [data-close-button] {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  left: auto !important;
+  transform: none !important;
+  height: 22px !important;
+  width: 22px !important;
+  border-radius: 9999px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #747775 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 0.6;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+[data-sonner-toast].teledrive-toast:hover [data-close-button] {
+  opacity: 1 !important;
+}
+
+[data-sonner-toast].teledrive-toast [data-close-button]:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #1f1f1f !important;
+}
+
+:is(.dark) [data-sonner-toast].teledrive-toast [data-close-button]:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+/* Button & Action styling */
+[data-sonner-toast].teledrive-toast [data-button] {
+  height: 28px !important;
+  padding: 0 12px !important;
+  border-radius: 9999px !important;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
+  background: #0b57d0 !important;
+  color: #ffffff !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease !important;
+}
+
+[data-sonner-toast].teledrive-toast [data-button]:hover {
+  background: #0842a0 !important;
+}
+
+:is(.dark) [data-sonner-toast].teledrive-toast [data-button] {
+  background: #a8c7fa !important;
+  color: #041e49 !important;
+}
+
+:is(.dark) [data-sonner-toast].teledrive-toast [data-button]:hover {
+  background: #d3e3fd !important;
+}
+
