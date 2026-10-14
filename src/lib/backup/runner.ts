@@ -74,6 +74,13 @@ const BACKUP_BATCH_SIZE = 3;
 const BACKUP_BREATHER_MS = 2_000;
 
 /**
+ * Save the file index once per this many uploads (plus once at the end of the run).
+ * Each index save replaces the index chunks in the channel; saving after every file
+ * made a fresh set of index messages appear after each upload.
+ */
+const BACKUP_INDEX_SAVE_EVERY = 10;
+
+/**
  * Hard cap on the channel-side folderPath string. Telegram documents
  * cap the caption at 1024 chars; the `teledrive_file:${JSON.stringify(
  * {folder})}:` wrapper adds ~30 chars on top of the path, so we cap
@@ -379,6 +386,7 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
   // Upload loop. Sequential — the existing uploadFileToTelegram already
   // manages Telegram-side FLOOD_WAIT backoff, and parallel uploads from
   // the backup runner would race the user's regular upload queue.
+  let pendingIndexSaves = 0;
   for (let i = 0; i < diff.toUpload.length; i++) {
     if (opts.signal?.aborted) {
       firstError ??= "Cancelled by user.";
@@ -550,6 +558,9 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
         ];
         useFileStore.getState().setFiles(optimisticFiles);
 
+        pendingIndexSaves += 1;
+        if (pendingIndexSaves >= BACKUP_INDEX_SAVE_EVERY) {
+        pendingIndexSaves = 0;
         try {
           await enqueueSave(channelId, optimisticFiles);
         } catch (indexErr) {
@@ -576,6 +587,7 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
               (indexErr as Error).message ?? indexErr,
             );
           }
+        }
         }
       } else {
         console.warn(
@@ -644,6 +656,15 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
         break;
       }
       // Continue with the rest for transient errors — partial is better than nothing.
+    }
+  }
+
+  // Save the index for files uploaded since the last batched save.
+  if (pendingIndexSaves > 0) {
+    try {
+      await enqueueSave(channelId, useFileStore.getState().files);
+    } catch (err) {
+      console.warn("[backup.runner] final index save failed:", (err as Error).message ?? err);
     }
   }
 
