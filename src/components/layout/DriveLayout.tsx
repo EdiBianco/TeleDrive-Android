@@ -741,7 +741,8 @@ export default function DriveLayout() {
       {/* Bottom Nav (Mobile) */}
       {isMobile && (
         <nav className="fixed bottom-0 left-0 right-0 h-[var(--mobile-nav-height)] border-t border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#1e1f20]/95 backdrop-blur-md flex items-center justify-around z-40 pb-[env(safe-area-inset-bottom)] select-none">
-          {navItems.map((item) => {
+          {/* Bottom bar shows the first three drive sections; Settings is the fourth tab. */}
+          {navItems.slice(0, 3).map((item) => {
             const Icon = item.icon;
             const isActive =
               location.pathname === item.path ||

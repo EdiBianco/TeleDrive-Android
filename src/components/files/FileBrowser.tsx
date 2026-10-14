@@ -963,8 +963,8 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
           })}
         </div>
 
-        {/* Sort Dropdown */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Sort Dropdown + view toggle: one row; the toggle sits at the right edge on phones */}
+        <div className="flex items-center justify-between gap-2 w-full sm:w-auto shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
