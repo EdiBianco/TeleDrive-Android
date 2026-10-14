@@ -16,8 +16,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: |
+          SDKM=$(find "$ANDROID_SDK_ROOT/cmdline-tools" -name sdkmanager -path '*/bin/*' | head -1)
+          echo "$(dirname "$SDKM")" >> "$GITHUB_PATH"
+          yes | "$SDKM" --licenses > /dev/null
 
       - name: Install Android NDK and platform
         run: |
