@@ -4,6 +4,7 @@ use std::time::Duration;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_keepalive::KeepAliveExt;
+use tauri_plugin_apkupdate::ApkUpdateExt;
 use tauri_plugin_storage::StorageExt;
 use tauri_plugin_keystore::KeystoreExt;
 use tokio::sync::Mutex as AsyncMutex;
@@ -465,6 +466,82 @@ async fn read_dir_recursive(path: String) -> Result<Vec<DirEntry>, String> {
 /// read. The Rust side runs with full filesystem access (Tauri's Rust
 /// commands are not subject to the JS plugin-fs scope), so this command
 /// works for any path the OS can read.
+/// A newer published release than the installed app.
+#[derive(serde::Serialize)]
+struct UpdateInfo {
+    tag: String,
+    version: String,
+    notes: String,
+    url: String,
+    sha256: String,
+    size: u64,
+    current: String,
+}
+
+/// Parses "major.minor.patch". Returns None for anything else.
+fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
+    let mut parts = v.split('.').map(|p| p.parse::<u64>().ok());
+    Some((parts.next()??, parts.next()??, parts.next()??))
+}
+
+/// Asks GitHub for the latest release. Returns it only if its version is newer than the installed app.
+#[tauri::command]
+async fn update_check(app: AppHandle) -> Result<Option<UpdateInfo>, String> {
+    let current = app.package_info().version.to_string();
+    let value = tauri::async_runtime::spawn_blocking(move || {
+        app.apkupdate().fetch_latest().map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("update check join failed: {e}"))??;
+
+    // Tags look like "v0.1.4-android.12": the version is the part before the first "-".
+    let tag = value["tag"].as_str().unwrap_or_default().to_string();
+    let version = tag.trim_start_matches('v').split('-').next().unwrap_or_default().to_string();
+    let latest = parse_version(&version).ok_or_else(|| format!("unrecognised release tag {tag}"))?;
+    let installed = parse_version(&current).ok_or_else(|| format!("unrecognised app version {current}"))?;
+    if latest <= installed {
+        return Ok(None);
+    }
+    Ok(Some(UpdateInfo {
+        tag,
+        version,
+        notes: value["notes"].as_str().unwrap_or_default().to_string(),
+        url: value["url"].as_str().unwrap_or_default().to_string(),
+        sha256: value["sha256"].as_str().unwrap_or_default().to_string(),
+        size: value["size"].as_u64().unwrap_or(0),
+        current,
+    }))
+}
+
+/// Downloads the verified APK into app cache. Returns its local path.
+#[tauri::command]
+async fn update_download(app: AppHandle, url: String, sha256: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.apkupdate().download(&url, &sha256).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("download join failed: {e}"))?
+}
+
+/// Bytes downloaded so far for the update in progress.
+#[tauri::command]
+async fn update_progress(app: AppHandle) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || app.apkupdate().status().map_err(|e| e.to_string()))
+        .await
+        .map_err(|e| format!("progress join failed: {e}"))?
+}
+
+/// Opens the system installer. Returns true when the user must first allow installs from TeleDrive.
+#[tauri::command]
+async fn update_install(app: AppHandle, path: String) -> Result<bool, String> {
+    let value = tauri::async_runtime::spawn_blocking(move || {
+        app.apkupdate().install(&path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("install join failed: {e}"))??;
+    Ok(value["needsPermission"].as_bool().unwrap_or(false))
+}
+
 /// Converts the storage plugin's `{ entries: [{ uri, relPath, size, mtimeMs }] }` into walker entries.
 fn storage_entries(value: serde_json::Value) -> Result<Vec<DirEntry>, String> {
     let items = value
@@ -633,6 +710,7 @@ pub fn run() {
         .plugin(tauri_plugin_keystore::init())
         .plugin(tauri_plugin_keepalive::init())
         .plugin(tauri_plugin_storage::init())
+        .plugin(tauri_plugin_apkupdate::init())
         .invoke_handler(tauri::generate_handler![
             greet,
             log_vault_state,
@@ -655,6 +733,10 @@ pub fn run() {
             storage_request_media,
             storage_list_media,
             storage_list_tree,
+            update_check,
+            update_download,
+            update_progress,
+            update_install,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")

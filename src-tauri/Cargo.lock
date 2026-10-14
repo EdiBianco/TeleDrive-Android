@@ -4367,6 +4367,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-apkupdate"
+version = "0.1.0"
+dependencies = [
+ "base64 0.13.1",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "tauri-plugin-dialog"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4624,6 +4636,7 @@ dependencies = [
  "serde_json",
  "tauri",
  "tauri-build",
+ "tauri-plugin-apkupdate",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
  "tauri-plugin-keepalive",

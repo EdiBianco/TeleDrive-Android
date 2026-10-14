@@ -20,6 +20,8 @@ import { getVersion } from "@tauri-apps/api/app";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { checkForUpdate } from "@/lib/updater/updater";
+import { useUpdateStore } from "@/stores/updateStore";
 
 export default function AboutSection() {
   const [version, setVersion] = useState("0.1.1");
@@ -48,14 +50,24 @@ export default function AboutSection() {
     }
   };
 
-  const handleCheckUpdates = () => {
+  const handleCheckUpdates = async () => {
     setChecking(true);
-    setTimeout(() => {
-      setChecking(false);
-      toast.success("You're up to date!", {
-        description: `TeleDrive v${version} is the latest version.`,
+    try {
+      const info = await checkForUpdate();
+      if (info) {
+        useUpdateStore.getState().openDialog(info);
+      } else {
+        toast.success("You're up to date!", {
+          description: `TeleDrive v${version} is the latest version.`,
+        });
+      }
+    } catch (err) {
+      toast.error("Could not check for updates", {
+        description: err instanceof Error ? err.message : String(err),
       });
-    }, 800);
+    } finally {
+      setChecking(false);
+    }
   };
 
   return (

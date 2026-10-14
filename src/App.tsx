@@ -63,9 +63,12 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
 }
 
 import { useTheme } from "./hooks/useTheme";
+import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
+import UpdateDialog from "./components/updates/UpdateDialog";
 
 function App() {
   useTheme(); // Initialize theme logic
+  useAutoUpdateCheck();
   const [isRestoring, setIsRestoring] = useState(true);
   const [status] = useState("Connecting to Telegram...");
 
@@ -198,6 +201,7 @@ function App() {
           that runs only while authenticated + bootstrapped. */}
       <Suspense fallback={null}>
         <RemoteSyncOrchestrator />
+        <UpdateDialog />
       </Suspense>
       <Toaster />
     </BrowserRouter>
