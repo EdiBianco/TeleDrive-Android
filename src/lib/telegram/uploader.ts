@@ -45,7 +45,7 @@ export async function uploadFileToTelegram(
   fileName: string,
   fileSize: number,
   filePathOrFile: string | File,
-  folderPath: string = "/",
+  _folderPath: string = "/", // unused: no caption is sent; placement is kept in the index
   onProgress?: UploadProgressCallback,
   onRetry?: UploadRetryCallback,
 ): Promise<any> {
@@ -157,11 +157,10 @@ export async function uploadFileToTelegram(
       });
     }
     
-    // Send document to storage channel with folder path JSON metadata caption.
+    // Send document to storage channel. No caption: folder placement lives in the index.
     // Finalize also goes through the retry helper — the file is already fully
     // uploaded to Telegram at this point, so the only failure modes here are
     // transient network/rate-limit issues.
-    const caption = `teledrive_file:${JSON.stringify({ folder: folderPath })}`;
     const finalizeLabel = "client.sendFile";
     const result = await withTelegramRetry(
       () =>
@@ -169,7 +168,6 @@ export async function uploadFileToTelegram(
           client.sendFile(channelId, {
             file: inputFile,
             forceDocument: true,
-            caption,
           }),
           SENDFILE_TIMEOUT_MS,
           finalizeLabel
