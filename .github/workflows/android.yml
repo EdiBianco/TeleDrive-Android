@@ -51,6 +51,20 @@ jobs:
       - name: Initialize Tauri Android project
         run: npm run tauri android init -- --ci
 
+      - name: Disable Android backup of app data
+        # The session string lives in the app data dir; keep it out of adb and Google backups.
+        run: |
+          python3 - <<'PY'
+          import glob, re
+          path = glob.glob('src-tauri/gen/android/app/src/main/AndroidManifest.xml')[0]
+          xml = open(path, encoding='utf-8').read()
+          if 'android:allowBackup=' in xml:
+              xml = re.sub(r'android:allowBackup="[^"]*"', 'android:allowBackup="false"', xml, count=1)
+          else:
+              xml = xml.replace('<application', '<application android:allowBackup="false"', 1)
+          open(path, 'w', encoding='utf-8').write(xml)
+          PY
+
       - name: Build debug APK
         run: npm run tauri android build -- --apk --debug --target aarch64
 

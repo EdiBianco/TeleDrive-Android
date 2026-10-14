@@ -96,24 +96,6 @@ class PdfErrorBoundary extends Component<{ children: ReactNode; onRetry?: () => 
 import DOMPurify from "dompurify";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 
-// ─── O2 Code Editor — runnable language map ────────────────────────────────
-// Maps our hljsLang alias → O2's route value.
-// Only languages O2 can actually execute/render are listed here.
-const O2_LANG_MAP: Record<string, string> = {
-  python:     "python",
-  javascript: "javascript",
-  typescript: "typescript",
-  cpp:        "cpp",
-  c:          "c",
-  java:       "java",
-  rust:       "rust",
-  go:         "go",
-  php:        "php",
-  ruby:       "ruby",
-  sql:        "sql",
-  html:       "html",
-};
-
 // ─── File-type icon ────────────────────────────────────────────────────────
 
 function FileTypeIcon({ mime, name }: { mime: string; name: string }) {
@@ -880,24 +862,6 @@ export function FilePreviewModal({ file, initialEditMode = false, onClose }: Pro
     }
   }, [file, editContent, isSaving]);
 
-  // ── O2 Code Editor integration ──────────────────────────────────────────
-  const handleOpenInO2 = useCallback(async () => {
-    const code = isEditMode ? editContent : (textContent ?? "");
-    const lInfo = detectLang(file?.name ?? "");
-    const o2Lang = O2_LANG_MAP[lInfo.hljsLang];
-    if (!o2Lang) return;
-    // Encode code as UTF-8 base64 for URL transport
-    const encoded = btoa(unescape(encodeURIComponent(code)));
-    const url = `https://o2code.vercel.app/${o2Lang}?code=${encoded}&run=true`;
-    
-    try {
-      await openUrl(url);
-    } catch (err) {
-      console.error("Failed to open URL in native browser:", err);
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
-  }, [file, textContent, editContent, isEditMode]);
-
   const handleCopyContent = useCallback(() => {
     const current = isEditMode ? editContent : (textContent ?? "");
     if (!current) return;
@@ -952,7 +916,6 @@ export function FilePreviewModal({ file, initialEditMode = false, onClose }: Pro
   const isSvgImageView    = isSvg && svgViewMode === "image" && !isEditMode;
   const isCode            = textContent !== null && !isMarkdownPreview && !isTableView && !isSvgImageView;
   const canEdit           = Boolean(file && isEditableFile(file) && !loading && !error && textContent !== null);
-  const canRunInO2        = textContent !== null && !loading && !error && O2_LANG_MAP[langInfo.hljsLang] !== undefined;
 
   const statusParts: string[] = [];
   if (langInfo.displayName && !isImage && !isVideo && !isAudio && !isPdf && !isArchive) {
@@ -1211,23 +1174,6 @@ export function FilePreviewModal({ file, initialEditMode = false, onClose }: Pro
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >
                   {copiedCode ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                </button>
-              )}
-
-              {/* O2 Code Runner button — shown for runnable languages */}
-              {canRunInO2 && (
-                <button
-                  onClick={handleOpenInO2}
-                  title="Run in O2 Code Editor"
-                  className="flex items-center gap-1.5 h-7 px-2.5 text-[12px] font-semibold rounded-lg cursor-pointer transition-all duration-150"
-                  style={{ color: isDark ? "#34d399" : "#059669" }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = isDark ? "rgba(52,211,153,0.12)" : "rgba(5,150,105,0.08)";
-                  }}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Run</span>
                 </button>
               )}
 
