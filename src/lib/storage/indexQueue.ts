@@ -44,6 +44,10 @@ const CHUNK_SIZE = 10;
 const FETCH_TIMEOUT_MS = 5000;
 const EDIT_TIMEOUT_MS = 8000;
 const PIN_TIMEOUT_MS = 4000;
+// Pinning posts a "pinned a message" notice in the channel for every pin. Pin the index at most
+// once per window; saves in between send unpinned chunks, which the scan-on-load path still finds.
+const PIN_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000;
+let lastIndexPinAt = 0;
 const DELETE_TIMEOUT_MS = 5000;
 
 /**
@@ -598,6 +602,9 @@ class ChannelQueue {
       // because loadIndex picks by message id, not pin status. The pin
       // is only a fast-path hint to find the index quickly; if it's
       // missing, the scan-on-load path still finds the right messages.
+      if (Date.now() - lastIndexPinAt < PIN_MIN_INTERVAL_MS) {
+        continue;
+      }
       try {
         await withTimeout(
           client.invoke(
@@ -617,6 +624,7 @@ class ChannelQueue {
         }).catch(() => {});
       }
     }
+    if (Date.now() - lastIndexPinAt >= PIN_MIN_INTERVAL_MS) lastIndexPinAt = Date.now();
 
     await invoke("log_vault_state", {
       state: `INDEX_FALLBACK_OK chunks=${chunks.length} files=${state.length} msgIds=[${newMsgIds.join(",")}]`,
