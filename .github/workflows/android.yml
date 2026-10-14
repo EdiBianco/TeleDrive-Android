@@ -6,6 +6,8 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -51,6 +53,19 @@ jobs:
 
       - name: Build debug APK
         run: npm run tauri android build -- --apk --debug --target aarch64
+
+      - name: Publish APK release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          APK=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -1)
+          cp "$APK" teledrive-android.apk
+          TAG="v${VERSION}-android.${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" teledrive-android.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "TeleDrive ${VERSION} (Android build ${GITHUB_RUN_NUMBER})" \
+            --notes "Debug APK built from ${GITHUB_SHA}. Enable Install unknown apps to sideload."
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

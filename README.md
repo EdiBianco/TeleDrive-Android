@@ -5,8 +5,9 @@
 [![React](https://img.shields.io/badge/React-v19-blue.svg?style=flat&logo=react)](https://react.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind--CSS-v4-38bdf8.svg?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
 [![Platform Support](https://img.shields.io/badge/Platform-Android-brightgreen.svg?style=flat)]()
+[![Download APK](https://img.shields.io/badge/Download-Latest%20APK-brightgreen.svg?style=flat&logo=android)](https://github.com/EdiBianco/TeleDrive/releases/latest/download/teledrive-android.apk)
 
-TeleDrive is a modern, cross-platform, zero-overhead cloud storage application that transforms a **private Telegram channel** into your own **unlimited personal drive**. Built on top of **Tauri v2**, **React 19**, **Vite**, **Tailwind CSS v4**, and **GramJS**, it delivers a Google Drive-like interface for managing nested folder trees and streaming files directly to/from Telegram servers without intermediate relays or storage subscription costs.
+TeleDrive is a modern, zero-overhead cloud storage application that transforms a **private Telegram channel** into your own **unlimited personal drive**. Built on top of **Tauri v2**, **React 19**, **Vite**, **Tailwind CSS v4**, and **GramJS**, it delivers a Google Drive-like interface for managing nested folder trees and streaming files directly to/from Telegram servers without intermediate relays or storage subscription costs.
 
 ---
 
@@ -22,9 +23,9 @@ TeleDrive is a modern, cross-platform, zero-overhead cloud storage application t
   - [System Prerequisites](#system-prerequisites)
   - [Acquiring Telegram API Keys](#acquiring-telegram-api-keys)
   - [Local Development Workspace](#local-development-workspace)
-  - [Compiling & Bundling for Production](#compiling--bundling-for-production)
+  - [Building the APK](#building-the-apk)
   - [Troubleshooting Common Issues](#troubleshooting-common-issues)
-- [⌨️ Keyboard Shortcuts & Gestures](#️-keyboard-shortcuts--gestures)
+- [👆 Touch Gestures](#-touch-gestures)
 - [🤝 Contributing Guidelines](#-contributing-guidelines)
 - [📜 License & Disclaimer](#-license--disclaimer)
 
@@ -33,7 +34,7 @@ TeleDrive is a modern, cross-platform, zero-overhead cloud storage application t
 ## 🌟 Core Features
 
 - **Unlimited Zero-Cost Storage**: Leverage Telegram's cloud hosting capabilities by utilizing a private, dedicated channel.
-- **Cross-Platform Native Experience**: Lightweight, native binaries compiled for **Android** using Tauri v2.
+- **Native Android Experience**: Lightweight, native binary built with Tauri v2.
 - **True Multi-Account Session Isolation**: Stores independent local vaults and folder catalogs keyed by telephone numbers. Seamlessly log out and switch accounts without clashing or data leakage.
 - **Client-Side MTProto Uploads/Downloads**: Utilizes GramJS direct connections. Your device speaks directly to Telegram API gateways; no third-party proxies, middleware, or servers see your files.
 - **Local Stronghold Credentials Vault**: Secures API credentials (`api_id`, `api_hash`) and active session tokens using Tauri's Software-encrypted vault (Argon2id KDF-derived keys bound to system profiles).
@@ -148,6 +149,10 @@ Ensure your system is equipped with the following toolchains before building:
 - **Node.js** (v20.19+ or v22.12+): Required for compiling the React/Vite/Tailwind frontend pipeline.
 - **Android SDK & NDK**: Required for building the Android app.
 
+### Installing the APK
+
+Download the [latest APK](https://github.com/EdiBianco/TeleDrive/releases/latest/download/teledrive-android.apk) from the releases page and install it. Allow *Install unknown apps* for the app you open it with.
+
 ### Acquiring Telegram API Keys
 
 To instantiate a connection, you must register a custom application credentials pair from Telegram:
@@ -175,7 +180,7 @@ To instantiate a connection, you must register a custom application credentials 
    npm run tauri android dev
    ```
 
-### Compiling & Bundling for Production
+### Building the APK
 
 To build the Android `.apk` package:
 ```bash
@@ -190,24 +195,9 @@ npm run tauri android build
 
 ---
 
-## ⌨️ Keyboard Shortcuts & Gestures
+## 👆 Touch Gestures
 
-TeleDrive supports power-user navigation controls:
-
-### Keyboard Bindings (Desktop)
-| Key combination | Action |
-|:---|:---|
-| `/` or `⌘ F` | Focus search bar |
-| `Esc` | Clear active file selections or blur search input |
-| `g g` | Scroll browser list to the top |
-| `g l` | Scroll browser list to the bottom |
-| `⌘ A` | Select all folders/files in the current folder view |
-| `F2` | Rename the selected file/folder |
-| `⌘ D` | Download selected items |
-| `Backspace` or `Del` | Move selected items to Trash (deletes permanently if inside Trash) |
-| `?` | Open keybindings cheat sheet dialog |
-
-### Touch Controls (Mobile / Android)
+### Touch Controls
 - **Pull-to-Refresh**: Swipe down from the top of the browser view to trigger a full index synchronization.
 - **Long-Press Sheet**: Hold down on any folder or file card to open a custom bottom sheet containing all action operations.
 - **Back Gestures**: Mobile hardware back gestures dynamically close sheets, drawers, or dialog overlays sequentially before terminating the main application.
