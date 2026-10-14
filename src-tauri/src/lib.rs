@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 use std::time::Duration;
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_keystore::KeystoreExt;
 use tokio::sync::Mutex as AsyncMutex;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -44,18 +45,45 @@ fn get_vault_state(lines: Option<usize>) -> Result<String, String> {
 
 
 
-/// Saves the Telegram session string to a simple JSON file in the app data directory.
-/// This is reliable, fast, and survives dev-server restarts without Stronghold overhead.
+/// Wraps a plaintext value so only sealed (Keystore-encrypted) bytes reach disk.
+fn seal_entry(app: &AppHandle, plain: &str) -> Result<serde_json::Value, String> {
+    let blob = app
+        .keystore()
+        .seal(plain)
+        .map_err(|e| format!("Failed to seal value: {e}"))?;
+    Ok(serde_json::json!({ "enc": blob }))
+}
+
+/// Reads a stored entry. A bare string is a legacy plaintext value written before sealing;
+/// callers accept it and re-seal it on read.
+fn open_entry(app: &AppHandle, entry: &serde_json::Value) -> Result<Option<String>, String> {
+    match entry {
+        serde_json::Value::String(plain) => Ok(Some(plain.clone())),
+        serde_json::Value::Object(obj) => match obj.get("enc").and_then(|v| v.as_str()) {
+            Some(blob) => app
+                .keystore()
+                .unseal(blob)
+                .map(Some)
+                .map_err(|e| format!("Failed to open value: {e}")),
+            None => Ok(None),
+        },
+        _ => Ok(None),
+    }
+}
+
+/// Saves the Telegram session and phone, sealed. Session grants full account access, so it is never plaintext on disk.
 #[tauri::command]
 fn save_session(app: tauri::AppHandle, session: String, phone: String) -> Result<(), String> {
     let session_path = get_session_path(&app)?;
-    let json = serde_json::json!({ "session": session, "phone": phone });
+    let json = serde_json::json!({
+        "session": seal_entry(&app, &session)?,
+        "phone": seal_entry(&app, &phone)?,
+    });
     std::fs::write(&session_path, json.to_string())
         .map_err(|e| format!("Failed to write session file: {e}"))
 }
 
-/// Loads the Telegram session string from the app data directory.
-/// Returns null fields if no session file exists.
+/// Loads the Telegram session and phone. Returns null fields if no session file exists.
 #[tauri::command]
 fn load_session(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let session_path = get_session_path(&app)?;
@@ -66,7 +94,26 @@ fn load_session(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
         .map_err(|e| format!("Failed to read session file: {e}"))?;
     let parsed: serde_json::Value = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse session file: {e}"))?;
-    Ok(parsed)
+
+    let session = match parsed.get("session") {
+        Some(entry) => open_entry(&app, entry)?,
+        None => None,
+    };
+    let phone = match parsed.get("phone") {
+        Some(entry) => open_entry(&app, entry)?,
+        None => None,
+    };
+
+    // Migrate a legacy plaintext session file to sealed form.
+    let legacy = matches!(parsed.get("session"), Some(serde_json::Value::String(_)))
+        || matches!(parsed.get("phone"), Some(serde_json::Value::String(_)));
+    if legacy {
+        if let (Some(s), Some(p)) = (session.as_deref(), phone.as_deref()) {
+            let _ = save_session(app.clone(), s.to_string(), p.to_string());
+        }
+    }
+
+    Ok(serde_json::json!({ "session": session, "phone": phone }))
 }
 
 /// Clears the saved session file (used on logout).
@@ -100,7 +147,7 @@ fn clear_session_only(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| format!("Failed to write session file: {e}"))
 }
 
-/// Saves a key-value pair to a vault file in the app data directory.
+/// Saves a key-value pair to the vault file. The value is sealed before it is written.
 #[tauri::command]
 fn save_vault_value(app: tauri::AppHandle, key: String, value: String) -> Result<(), String> {
     let vault_path = get_vault_path(&app)?;
@@ -112,14 +159,14 @@ fn save_vault_value(app: tauri::AppHandle, key: String, value: String) -> Result
     } else {
         serde_json::Map::new()
     };
-    
-    data.insert(key, serde_json::Value::String(value));
-    
+
+    data.insert(key, seal_entry(&app, &value)?);
+
     std::fs::write(&vault_path, serde_json::to_string(&data).unwrap())
         .map_err(|e| format!("Failed to write vault file: {e}"))
 }
 
-/// Loads a value for a key from the vault file.
+/// Loads a value for a key from the vault file. Legacy plaintext entries are re-sealed on read.
 #[tauri::command]
 fn load_vault_value(app: tauri::AppHandle, key: String) -> Result<Option<String>, String> {
     let vault_path = get_vault_path(&app)?;
@@ -130,13 +177,15 @@ fn load_vault_value(app: tauri::AppHandle, key: String) -> Result<Option<String>
         .map_err(|e| format!("Failed to read vault file: {e}"))?;
     let data: serde_json::Map<String, serde_json::Value> = serde_json::from_str(&contents)
         .map_err(|e| format!("Failed to parse vault file: {e}"))?;
-    
-    if let Some(val) = data.get(&key) {
-        if let Some(s) = val.as_str() {
-            return Ok(Some(s.to_string()));
-        }
+
+    let Some(entry) = data.get(&key) else {
+        return Ok(None);
+    };
+    let plain = open_entry(&app, entry)?;
+    if let (serde_json::Value::String(_), Some(p)) = (entry, plain.as_deref()) {
+        let _ = save_vault_value(app.clone(), key.clone(), p.to_string());
     }
-    Ok(None)
+    Ok(plain)
 }
 
 /// Deletes a key-value pair from the vault file.
@@ -494,6 +543,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_keystore::init())
         .invoke_handler(tauri::generate_handler![
             greet,
             log_vault_state,

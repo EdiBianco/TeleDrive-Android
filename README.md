@@ -37,7 +37,7 @@ TeleDrive is a modern, zero-overhead cloud storage application that transforms a
 - **Native Android Experience**: Lightweight, native binary built with Tauri v2.
 - **True Multi-Account Session Isolation**: Stores independent local vaults and folder catalogs keyed by telephone numbers. Seamlessly log out and switch accounts without clashing or data leakage.
 - **Client-Side MTProto Uploads/Downloads**: Utilizes GramJS direct connections. Your device speaks directly to Telegram API gateways; no third-party proxies, middleware, or servers see your files.
-- **Local Stronghold Credentials Vault**: Secures API credentials (`api_id`, `api_hash`) and active session tokens using Tauri's Software-encrypted vault (Argon2id KDF-derived keys bound to system profiles).
+- **Keystore-Sealed Credentials Vault**: API credentials (`api_id`, `api_hash`), the session token, and phone number are encrypted with an AES-256-GCM key held in Android Keystore. The key cannot be exported, and app backups are disabled.
 - **Virtual Folder Structure**: Simulates folders, subfolders, stars, archives, and trash states using a lightweight metadata catalog pinned directly to your storage channel.
 
 ---
@@ -60,7 +60,7 @@ TeleDrive functions as a fully decentralized, offline-first client application.
 ┌─────────────▼───────────┐         ┌─────▼──────────────┐
 │     Tauri Rust Core     │         │ Telegram Cloud API │
 │  ┌───────────────────┐  │         │   (DC Gateways)    │
-│  │ Stronghold Vault  │  │         └────────────────────┘
+│  │ Sealed Vault      │  │         └────────────────────┘
 │  └───────────────────┘  │
 └─────────────────────────┘
 ```
@@ -75,12 +75,12 @@ sequenceDiagram
     actor User
     participant Frontend as React Webview (GramJS)
     participant Core as Tauri Rust Core
-    participant Vault as Stronghold Secure Store
+    participant Vault as Keystore-Sealed Vault
     participant TG as Telegram Cloud Gateway
 
     User->>Frontend: Launch TeleDrive
     Frontend->>Core: Request stored session (IPC: load_session)
-    Core->>Vault: Fetch Argon2id-encrypted credentials
+    Core->>Vault: Fetch sealed credentials (decrypted via Android Keystore)
     Vault-->>Core: Decrypted api_id, api_hash & GramJS Session
     Core-->>Frontend: Return Credentials & Session Token
     
@@ -111,8 +111,8 @@ To upload files larger than Telegram's message limits, TeleDrive performs client
 
 TeleDrive prioritizes local cryptography and private communication:
 - **Zero Intermediary Server Footprint**: No servers are run by the TeleDrive developers. File content and metadata never traverse third-party machines.
-- **Tauri Stronghold Vault**: MTProto authentication keys and credentials are saved using Tauri's **Stronghold** module. This creates a secure-by-default software database protected by Argon2id master keys generated from a combination of operating-system-specific hardware identifiers.
-- **Anti-Leakage Isolation**: When logging out, Tauri completely wipes the corresponding entry inside the Stronghold database and clears the active session from memory.
+- **Keystore-Sealed Vault**: MTProto session, credentials, and channel IDs are sealed with an Android Keystore key before they are written to the app data directory. Legacy plaintext entries are re-sealed on first read.
+- **Anti-Leakage Isolation**: When logging out, TeleDrive clears the session token from the sealed vault and clears it from memory.
 
 ---
 

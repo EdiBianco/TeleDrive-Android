@@ -4409,6 +4409,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-keystore"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "tauri-plugin-opener"
 version = "2.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4593,6 +4603,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
+ "tauri-plugin-keystore",
  "tauri-plugin-opener",
  "tauri-plugin-process",
  "tauri-plugin-shell",

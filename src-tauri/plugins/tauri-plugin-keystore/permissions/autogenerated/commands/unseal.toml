@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-unseal"
+description = "Enables the unseal command without any pre-configured scope."
+commands.allow = ["unseal"]
+
+[[permission]]
+identifier = "deny-unseal"
+description = "Denies the unseal command without any pre-configured scope."
+commands.deny = ["unseal"]
