@@ -30,6 +30,10 @@ export default defineConfig(async () => ({
       protocolImports: true,
     }),
   ],
+  esbuild: {
+    pure: ["console.log", "console.debug"],
+    drop: ["debugger"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

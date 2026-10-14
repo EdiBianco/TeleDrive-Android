@@ -513,13 +513,6 @@ pub fn run() {
             write_file_binary,
             write_file_chunk,
         ])
-        .setup(|app| {
-            #[cfg(debug_assertions)]
-            if let Some(window) = app.get_webview_window("TeleDrive") {
-                window.open_devtools();
-            }
-            Ok(())
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
 }
