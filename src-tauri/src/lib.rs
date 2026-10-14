@@ -473,41 +473,6 @@ async fn write_file_chunk(path: String, data: Vec<u8>, append: bool) -> Result<(
     .map_err(|e| format!("write_file_chunk task join error: {e}"))?
 }
 
-/// Opens any file with the host system's default viewer application.
-/// Provides an unconstrained, bulletproof fallback across macOS (open),
-/// Windows (cmd /c start), and Linux (xdg-open).
-#[tauri::command]
-fn open_file_in_system_viewer(path: String) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("cmd")
-            .args(["/C", "start", "", &path])
-            .spawn()
-            .map_err(|e| format!("Failed to open file on Windows: {e}"))?;
-        Ok(())
-    }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| format!("Failed to open file on macOS: {e}"))?;
-        Ok(())
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| format!("Failed to open file on Linux: {e}"))?;
-        Ok(())
-    }
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    {
-        Err("Unsupported operating system for opening files".to_string())
-    }
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -547,7 +512,6 @@ pub fn run() {
             read_file_chunk,
             write_file_binary,
             write_file_chunk,
-            open_file_in_system_viewer,
         ])
         .setup(|app| {
             #[cfg(debug_assertions)]

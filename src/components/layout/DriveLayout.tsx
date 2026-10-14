@@ -47,7 +47,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getModKey } from "@/lib/os";
 
 const DND_PAYLOAD_MIME = "application/x-teledrive-item-ids";
 
@@ -139,7 +138,7 @@ export default function DriveLayout() {
   const location = useLocation();
   const isMobile = useIsMobile();
   const phoneNumber = useAuthStore((state) => state.phoneNumber);
-  const modKey = useMemo(() => getModKey(), []);
+  const modKey = "Ctrl+";
   
   const {
     moveMultipleFilesOrFolders,

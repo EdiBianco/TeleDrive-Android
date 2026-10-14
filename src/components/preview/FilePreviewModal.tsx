@@ -776,13 +776,7 @@ export function FilePreviewModal({ file, initialEditMode = false, onClose }: Pro
         }
       }
 
-      try {
-        await openPath(tempFilePath);
-      } catch (openerErr) {
-        console.warn("plugin-opener failed, invoking native open_file_in_system_viewer:", openerErr);
-        const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("open_file_in_system_viewer", { path: tempFilePath });
-      }
+      await openPath(tempFilePath);
       toast.success("Opened document in system viewer.");
     } catch (err: any) {
       console.error("Failed to open document in system app:", err);
