@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -18,6 +18,53 @@ type Phase =
   | { kind: "installing" }
   | { kind: "needs-permission" }
   | { kind: "error"; message: string };
+
+/** Plain-text rendering of release notes: "## " lines become headings, "- " lines become bullets. */
+function ReleaseNotes({ text }: { text: string }) {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/\*\*/g, ""))
+    .filter(Boolean);
+  if (lines.length === 0) {
+    return <p className="text-xs text-[#747775]">Details for this update will appear here.</p>;
+  }
+  const blocks: ReactNode[] = [];
+  let bullets: string[] = [];
+  const closeBullets = () => {
+    if (bullets.length) {
+      blocks.push(
+        <ul key={`ul-${blocks.length}`} className="list-disc pl-4 space-y-1 text-xs">
+          {bullets.map((item, i) => (
+            <li key={i}>{item}</li>
+          ))}
+        </ul>,
+      );
+      bullets = [];
+    }
+  };
+  lines.forEach((line, i) => {
+    if (/^[-*]\s+/.test(line)) {
+      bullets.push(line.replace(/^[-*]\s+/, ""));
+      return;
+    }
+    closeBullets();
+    if (/^#+\s/.test(line)) {
+      blocks.push(
+        <p key={`h-${i}`} className="text-sm font-semibold text-[#1f1f1f] dark:text-[#e3e3e3] mt-2 first:mt-0">
+          {line.replace(/^#+\s*/, "")}
+        </p>,
+      );
+    } else {
+      blocks.push(
+        <p key={`p-${i}`} className="text-xs">
+          {line}
+        </p>,
+      );
+    }
+  });
+  closeBullets();
+  return <div className="space-y-1">{blocks}</div>;
+}
 
 function formatMb(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -63,8 +110,8 @@ export default function UpdateDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-60 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 p-3 text-xs whitespace-pre-wrap">
-          {info.notes.trim() || "No release notes for this version."}
+        <div className="max-h-60 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+          <ReleaseNotes text={info.notes} />
         </div>
 
         {phase.kind === "downloading" && (

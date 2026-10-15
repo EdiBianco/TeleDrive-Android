@@ -97,10 +97,16 @@ jobs:
         run: |
           VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
           TAG="v${VERSION}-android.${GITHUB_RUN_NUMBER}"
+          NOTES_FILE="release-notes/${VERSION}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            NOTES_ARG=(--notes-file "$NOTES_FILE")
+          else
+            NOTES_ARG=(--notes "Improvements and fixes.")
+          fi
           gh release create "$TAG" teledrive-android.apk \
             --repo "$GITHUB_REPOSITORY" \
             --title "TeleDrive ${VERSION} (Android build ${GITHUB_RUN_NUMBER})" \
-            --notes "APK built from ${GITHUB_SHA}, signed with the TeleDrive release key. Install over the previous version; enable Install unknown apps to sideload."
+            "${NOTES_ARG[@]}"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
