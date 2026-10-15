@@ -5,6 +5,7 @@ use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_keepalive::KeepAliveExt;
 use tauri_plugin_apkupdate::ApkUpdateExt;
+use tauri_plugin_fileshare::FileShareExt;
 use tauri_plugin_storage::StorageExt;
 use tauri_plugin_keystore::KeystoreExt;
 use tokio::sync::Mutex as AsyncMutex;
@@ -466,6 +467,48 @@ async fn read_dir_recursive(path: String) -> Result<Vec<DirEntry>, String> {
 /// read. The Rust side runs with full filesystem access (Tauri's Rust
 /// commands are not subject to the JS plugin-fs scope), so this command
 /// works for any path the OS can read.
+/// Path where a file is staged for open/share: <app cache>/shared/<safe name>.
+/// The directory is created if needed; the caller writes the bytes there.
+#[tauri::command]
+fn shared_file_path(app: AppHandle, name: String) -> Result<String, String> {
+    let base = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| format!("cache dir unavailable: {e}"))?
+        .join("shared");
+    std::fs::create_dir_all(&base).map_err(|e| format!("create shared dir failed: {e}"))?;
+    // Keep only the file name: no folders, no path tricks.
+    let safe: String = name
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or("file")
+        .chars()
+        .map(|c| if "<>:\"|?*".contains(c) || c.is_control() { '_' } else { c })
+        .collect();
+    let safe = if safe.trim().is_empty() || safe == "." || safe == ".." { "file".to_string() } else { safe };
+    Ok(base.join(safe).to_string_lossy().into_owned())
+}
+
+/// Opens a staged file with the default app for its type.
+#[tauri::command]
+async fn file_open(app: AppHandle, path: String, mime: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.fileshare().open(&path, &mime).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("open join failed: {e}"))?
+}
+
+/// Sends a staged file to other apps through the Android share sheet.
+#[tauri::command]
+async fn file_share(app: AppHandle, path: String, mime: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.fileshare().share(&path, &mime).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("share join failed: {e}"))?
+}
+
 /// A newer published release than the installed app.
 #[derive(serde::Serialize)]
 struct UpdateInfo {
@@ -711,6 +754,7 @@ pub fn run() {
         .plugin(tauri_plugin_keepalive::init())
         .plugin(tauri_plugin_storage::init())
         .plugin(tauri_plugin_apkupdate::init())
+        .plugin(tauri_plugin_fileshare::init())
         .invoke_handler(tauri::generate_handler![
             greet,
             log_vault_state,
@@ -737,6 +781,9 @@ pub fn run() {
             update_download,
             update_progress,
             update_install,
+            shared_file_path,
+            file_open,
+            file_share,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")

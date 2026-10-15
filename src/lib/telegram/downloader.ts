@@ -20,7 +20,7 @@ function toNumber(val: any): number {
 /**
  * Safely resolves a channel ID string to a peer entity for GramJS client queries.
  */
-async function resolvePeer(channelId: string): Promise<any> {
+export async function resolvePeer(channelId: string): Promise<any> {
   const client = getClient();
   try {
     return await client.getInputEntity(channelId);

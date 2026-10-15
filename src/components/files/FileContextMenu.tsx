@@ -20,7 +20,9 @@ import {
   CheckCircle,
   Check,
   ExternalLink,
+  Share2,
 } from "lucide-react";
+import { openOrShareFile } from "@/lib/files/openShare";
 import { TeleFile } from "@/lib/types";
 import { isEditableFile } from "@/lib/files/editableTypes";
 
@@ -98,6 +100,24 @@ export const FileContextMenu = React.memo(function FileContextMenu({
             <Download className="h-4 w-4 text-[#444746] dark:text-[#c4c7c5] shrink-0" strokeWidth={1.75} />
             <span>Download</span>
           </ContextMenuItem>
+        )}
+        {!isDirectory && !file.trashed && !file.archived && (
+          <>
+            <ContextMenuItem
+              onClick={() => openOrShareFile(file, "open")}
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium cursor-pointer rounded-xl text-[#1f1f1f] dark:text-[#e3e3e3] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2c]"
+            >
+              <ExternalLink className="h-4 w-4 text-[#444746] dark:text-[#c4c7c5] shrink-0" strokeWidth={1.75} />
+              <span>Open with…</span>
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => openOrShareFile(file, "share")}
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium cursor-pointer rounded-xl text-[#1f1f1f] dark:text-[#e3e3e3] hover:bg-[#f0f4f9] dark:hover:bg-[#282a2c]"
+            >
+              <Share2 className="h-4 w-4 text-[#444746] dark:text-[#c4c7c5] shrink-0" strokeWidth={1.75} />
+              <span>Share</span>
+            </ContextMenuItem>
+          </>
         )}
         {!isDirectory && !file.trashed && !file.archived && onOfflineToggle && (
           <ContextMenuItem

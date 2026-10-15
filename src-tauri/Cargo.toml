@@ -35,6 +35,7 @@ tauri-plugin-keystore = { path = "plugins/tauri-plugin-keystore" }
 tauri-plugin-keepalive = { path = "plugins/tauri-plugin-keepalive" }
 tauri-plugin-storage = { path = "plugins/tauri-plugin-storage" }
 tauri-plugin-apkupdate = { path = "plugins/tauri-plugin-apkupdate" }
+tauri-plugin-fileshare = { path = "plugins/tauri-plugin-fileshare" }
 argon2 = "0.5.3"
 tokio = { version = "1", features = ["sync", "time"] }
 

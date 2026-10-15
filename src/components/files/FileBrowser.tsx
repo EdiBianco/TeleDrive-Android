@@ -59,6 +59,8 @@ import { useFileBrowserDragAndDrop } from "@/hooks/useFileBrowserDragAndDrop";
 import { collapseDuplicateFolders, dedupeByContentKey, dedupeByMessageId, folderIdForPath } from "@/lib/storage/metadataStore";
 import { isBackupItem, BACKUP_ROOT, BACKUP_ROOT_PREFIX } from "@/lib/backup/visibility";
 import { toast } from "sonner";
+import { usePinchColumns } from "@/hooks/usePinchColumns";
+import ThumbImage from "./ThumbImage";
 
 // ---------------------------------------------------------------------------
 // Utility: human-readable file size
@@ -158,6 +160,7 @@ interface FileBrowserProps {
 
 export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = "" }: FileBrowserProps) {
   const navigate = useNavigate();
+  const pinch = usePinchColumns();
   const files = useFileStore((state) => state.files);
   const selectedIds = useFileStore((state) => state.selectedIds);
   const selectedIdsSet = useFileStore((state) => state.selectedIdsSet);
@@ -1049,7 +1052,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
               <h2 className="text-xs font-semibold text-[#444746] dark:text-[#c4c7c5] tracking-wide block">
                 Folders {folders.length > renderLimit && `(${Math.min(folders.length, renderLimit)} of ${folders.length})`}
               </h2>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3 px-0.5">
+              <div className="grid gap-3 px-0.5" style={pinch.style} {...pinch.bind}>
                 {folders.slice(0, renderLimit).map((folder, index) => {
                   const isSelected = selectedIdsSet.has(folder.id);
                   const isBeingDragged = draggedId !== null && (draggedId === folder.id || (isSelected && selectedIdsSet.has(draggedId)));
@@ -1134,7 +1137,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
               <h2 className="text-xs font-semibold text-[#444746] dark:text-[#c4c7c5] tracking-wide block">
                 Files {regularFiles.length > renderLimit && `(${Math.min(regularFiles.length, renderLimit)} of ${regularFiles.length})`}
               </h2>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4 px-0.5">
+              <div className="grid gap-4 px-0.5" style={pinch.style} {...pinch.bind}>
                 {regularFiles.slice(0, renderLimit).map((file, index) => {
                   const isSelected = selectedIdsSet.has(file.id);
                   return (
@@ -1196,13 +1199,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
 
                         {/* Centered Preview Canvas */}
                         <div className="flex-1 bg-[#f8fafd] dark:bg-[#131314]/80 mx-2.5 my-1 rounded-xl border border-slate-100 dark:border-slate-800/80 flex items-center justify-center relative overflow-hidden pointer-events-none">
-                          {file.thumbnailUrl ? (
-                            <img
-                              src={file.thumbnailUrl}
-                              alt={file.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
+                          <ThumbImage file={file}>
                             <div className="w-16 h-20 bg-white dark:bg-[#202124] rounded-md shadow-xs border border-slate-200/80 dark:border-slate-700/80 p-2 flex flex-col items-center justify-between pointer-events-none select-none">
                               <div className="w-full space-y-1 mt-0.5 opacity-40">
                                 <div className="h-0.5 bg-slate-300 dark:bg-slate-600 rounded-full w-full" />
@@ -1217,7 +1214,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
                                 <div className="h-0.5 bg-slate-300 dark:bg-slate-600 rounded-full w-2/3" />
                               </div>
                             </div>
-                          )}
+                          </ThumbImage>
 
                           {file.starred && (
                             <Star className="absolute top-2 right-2 h-4 w-4 fill-amber-400 text-amber-400 drop-shadow-xs" />
