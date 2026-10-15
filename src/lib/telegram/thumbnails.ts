@@ -7,6 +7,7 @@
  * and thumbnails are produced one at a time to stay clear of flood limits.
  * Results are kept as object URLs for the session.
  */
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { getClient } from "./client";
 import { resolvePeer } from "./downloader";
 
@@ -102,15 +103,34 @@ async function flush() {
   const client = getClient();
   for (const [channelId, idSet] of pending) {
     const ids = Array.from(idSet);
+    const missing: number[] = [];
+    // Disk cache first: a hit costs no Telegram request.
+    for (const id of ids) {
+      const cached = await invoke<string | null>("thumb_path", { channelId, messageId: id }).catch(() => null);
+      if (cached) {
+        urls.set(id, convertFileSrc(cached));
+        settle(id);
+      } else {
+        missing.push(id);
+      }
+    }
     try {
       const peer = await resolvePeer(channelId);
-      for (let i = 0; i < ids.length; i += IDS_PER_REQUEST) {
-        const messages = await client.getMessages(peer, { ids: ids.slice(i, i + IDS_PER_REQUEST) });
+      for (let i = 0; i < missing.length; i += IDS_PER_REQUEST) {
+        const messages = await client.getMessages(peer, { ids: missing.slice(i, i + IDS_PER_REQUEST) });
         for (const message of messages) {
           if (!message?.media) continue;
           try {
             const blob = await makeThumbnail(client, message.media);
-            if (blob) urls.set(message.id, URL.createObjectURL(blob));
+            if (!blob) continue;
+            // Save to disk so the next launch reads it instead of downloading again.
+            const bytes = Array.from(new Uint8Array(await blob.arrayBuffer()));
+            const saved = await invoke<string>("thumb_save", {
+              channelId,
+              messageId: message.id,
+              data: bytes,
+            }).catch(() => null);
+            urls.set(message.id, saved ? convertFileSrc(saved) : URL.createObjectURL(blob));
           } catch {
             // No thumbnail for this file; the card keeps its icon.
           }
@@ -119,6 +139,6 @@ async function flush() {
     } catch (err) {
       console.warn("[thumbnails] batch failed:", err);
     }
-    for (const id of ids) settle(id);
+    for (const id of missing) settle(id);
   }
 }

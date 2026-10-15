@@ -1,6 +1,6 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use tauri::async_runtime::JoinHandle;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_keepalive::KeepAliveExt;
@@ -370,8 +370,6 @@ async fn stop_backup_scheduler_internal(app: &AppHandle) {
 // ============================================================================
 
 use serde::Serialize;
-use std::path::Path;
-use std::time::SystemTime;
 
 #[derive(Serialize)]
 struct DirEntry {
@@ -507,6 +505,90 @@ async fn file_share(app: AppHandle, path: String, mime: String) -> Result<(), St
     })
     .await
     .map_err(|e| format!("share join failed: {e}"))?
+}
+
+/// Largest the on-disk thumbnail cache may grow before the least recently shown are removed.
+const THUMB_CACHE_MAX_BYTES: u64 = 200 * 1024 * 1024;
+/// Largest single thumbnail accepted from the webview.
+const THUMB_MAX_BYTES: usize = 2 * 1024 * 1024;
+
+fn thumb_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| format!("cache dir unavailable: {e}"))?
+        .join("thumbs");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("create thumbs dir failed: {e}"))?;
+    Ok(dir)
+}
+
+/// File name per channel and message: "<channel>_<message>.jpg". Channel ids are numeric.
+fn thumb_file_name(channel_id: &str, message_id: i64) -> Result<String, String> {
+    if channel_id.is_empty() || !channel_id.chars().all(|c| c.is_ascii_digit() || c == '-') {
+        return Err("invalid channel id".into());
+    }
+    Ok(format!("{channel_id}_{message_id}.jpg"))
+}
+
+/// Removes the least recently used thumbnails until the cache is under the cap.
+fn prune_thumbs(dir: &Path) {
+    let Ok(read) = std::fs::read_dir(dir) else { return };
+    let mut entries: Vec<(PathBuf, u64, SystemTime)> = read
+        .flatten()
+        .filter_map(|entry| {
+            let meta = entry.metadata().ok()?;
+            if !meta.is_file() {
+                return None;
+            }
+            Some((entry.path(), meta.len(), meta.modified().ok()?))
+        })
+        .collect();
+    let mut total: u64 = entries.iter().map(|e| e.1).sum();
+    if total <= THUMB_CACHE_MAX_BYTES {
+        return;
+    }
+    entries.sort_by_key(|e| e.2);
+    for (path, size, _) in entries {
+        if total <= THUMB_CACHE_MAX_BYTES {
+            break;
+        }
+        if std::fs::remove_file(&path).is_ok() {
+            total -= size;
+        }
+    }
+}
+
+/// Path of a cached thumbnail, or null if none. Marks it as recently used.
+#[tauri::command]
+fn thumb_path(app: AppHandle, channel_id: String, message_id: i64) -> Result<Option<String>, String> {
+    let path = thumb_dir(&app)?.join(thumb_file_name(&channel_id, message_id)?);
+    if !path.is_file() {
+        return Ok(None);
+    }
+    if let Ok(file) = std::fs::File::open(&path) {
+        let _ = file.set_modified(SystemTime::now());
+    }
+    Ok(Some(path.to_string_lossy().into_owned()))
+}
+
+/// Stores a thumbnail (atomically) and prunes the cache. Returns the cached file path.
+#[tauri::command]
+fn thumb_save(
+    app: AppHandle,
+    channel_id: String,
+    message_id: i64,
+    data: Vec<u8>,
+) -> Result<String, String> {
+    if data.is_empty() || data.len() > THUMB_MAX_BYTES {
+        return Err("thumbnail size out of range".into());
+    }
+    let dir = thumb_dir(&app)?;
+    let path = dir.join(thumb_file_name(&channel_id, message_id)?);
+    let tmp = dir.join(format!("{}.part", thumb_file_name(&channel_id, message_id)?));
+    std::fs::write(&tmp, &data).map_err(|e| format!("write thumbnail failed: {e}"))?;
+    std::fs::rename(&tmp, &path).map_err(|e| format!("save thumbnail failed: {e}"))?;
+    prune_thumbs(&dir);
+    Ok(path.to_string_lossy().into_owned())
 }
 
 /// A newer published release than the installed app.
@@ -784,6 +866,8 @@ pub fn run() {
             shared_file_path,
             file_open,
             file_share,
+            thumb_path,
+            thumb_save,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
