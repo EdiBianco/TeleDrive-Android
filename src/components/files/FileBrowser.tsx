@@ -1055,7 +1055,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
               <h2 className="text-xs font-semibold text-[#444746] dark:text-[#c4c7c5] tracking-wide block">
                 Folders {folders.length > renderLimit && `(${Math.min(folders.length, renderLimit)} of ${folders.length})`}
               </h2>
-              <div className="grid gap-3 px-0.5" style={pinch.style} {...pinch.bind}>
+              <div className="flex flex-wrap gap-3 px-0.5" {...pinch.bind}>
                 {folders.slice(0, renderLimit).map((folder, index) => {
                   const isSelected = selectedIdsSet.has(folder.id);
                   const isBeingDragged = draggedId !== null && (draggedId === folder.id || (isSelected && selectedIdsSet.has(draggedId)));
@@ -1081,7 +1081,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
                         onTouchEnd={handleTouchEndItem}
                         onTouchMove={handleTouchEndItem}
                         data-folder-id={folder.id}
-                        style={{ animationDelay: `${Math.min(index, 15) * 20}ms` }}
+                        style={{ animationDelay: `${Math.min(index, 15) * 20}ms`, ...pinch.itemStyle }}
                         className={cn(
                           "group relative flex items-center justify-between gap-3 h-12 px-3.5 rounded-xl transition-all duration-150 cursor-pointer select-none border border-transparent hover:border-slate-300/80 dark:hover:border-slate-700/80",
                           isSelected
@@ -1140,7 +1140,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
               <h2 className="text-xs font-semibold text-[#444746] dark:text-[#c4c7c5] tracking-wide block">
                 Files {regularFiles.length > renderLimit && `(${Math.min(regularFiles.length, renderLimit)} of ${regularFiles.length})`}
               </h2>
-              <div className="grid gap-4 px-0.5" style={pinch.style} {...pinch.bind}>
+              <div className="flex flex-wrap gap-3 px-0.5" {...pinch.bind}>
                 {regularFiles.slice(0, renderLimit).map((file, index) => {
                   const isSelected = selectedIdsSet.has(file.id);
                   return (
@@ -1166,7 +1166,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
                         onTouchStart={() => handleTouchStartItem(file)}
                         onTouchEnd={handleTouchEndItem}
                         onTouchMove={handleTouchEndItem}
-                        style={{ animationDelay: `${Math.min(folders.length + index, 15) * 20}ms` }}
+                        style={{ animationDelay: `${Math.min(folders.length + index, 15) * 20}ms`, ...pinch.itemStyle }}
                         className={cn(
                           "group relative flex flex-col rounded-2xl transition-all duration-150 cursor-pointer overflow-hidden text-left select-none [container-type:inline-size] bg-white dark:bg-[#1e1f20] hover:bg-[#f8fafd] dark:hover:bg-[#282a2c] border border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md",
                           isSelected
