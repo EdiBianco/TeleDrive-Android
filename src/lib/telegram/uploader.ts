@@ -14,7 +14,7 @@ import { withTelegramRetry } from "./rateLimit";
 
 const CHUNK_SIZE = 512 * 1024; // 512KB recommended chunk size for Telegram
 // Parts in flight per file. One at a time made every 512KB wait a full round trip.
-const PART_CONCURRENCY = 3;
+const PART_CONCURRENCY = 4;
 const CHUNK_TIMEOUT_MS = 20_000;
 const SENDFILE_TIMEOUT_MS = 30_000;
 
