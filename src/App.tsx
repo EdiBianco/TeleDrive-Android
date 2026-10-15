@@ -64,11 +64,15 @@ function GuestRoute({ children }: { children: React.ReactNode }) {
 
 import { useTheme } from "./hooks/useTheme";
 import { useAutoUpdateCheck } from "./hooks/useAutoUpdateCheck";
+import { loadDeviceName } from "./lib/secure/deviceInfo";
 import UpdateDialog from "./components/updates/UpdateDialog";
 
 function App() {
   useTheme(); // Initialize theme logic
   useAutoUpdateCheck();
+  useEffect(() => {
+    void loadDeviceName();
+  }, []);
   const [isRestoring, setIsRestoring] = useState(true);
   const [status] = useState("Connecting to Telegram...");
 

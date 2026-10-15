@@ -9,6 +9,8 @@
  * (`macos | windows | linux | ios | android`). Anything unrecognized falls
  * back to `linux` (the most permissive default for desktop-class devices).
  */
+import { invoke } from '@tauri-apps/api/core';
+
 export type OS = 'macos' | 'windows' | 'linux' | 'ios' | 'android';
 
 const USER_AGENT = (typeof navigator !== 'undefined' ? navigator.userAgent : '').toLowerCase();
@@ -46,5 +48,18 @@ const OS_LABEL: Record<OS, string> = {
  * Settings → Plan & Devices panel. Example: "TeleDrive Desktop on macOS".
  */
 export function getDeviceName(): string {
+  if (detectOS() === "android") return phoneName ?? "Android phone";
   return `TeleDrive Desktop on ${OS_LABEL[detectOS()]}`;
+}
+
+let phoneName: string | null = null;
+
+/** Loads the phone's name once at startup (Android). Backup folders use it. */
+export async function loadDeviceName(): Promise<void> {
+  try {
+    const name = (await invoke<string>("device_name")).trim();
+    phoneName = name || null;
+  } catch {
+    phoneName = null;
+  }
 }

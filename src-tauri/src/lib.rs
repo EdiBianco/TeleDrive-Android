@@ -507,6 +507,14 @@ async fn file_share(app: AppHandle, path: String, mime: String) -> Result<(), St
     .map_err(|e| format!("share join failed: {e}"))?
 }
 
+/// The phone's name, shown as the top backup folder.
+#[tauri::command]
+async fn device_name(app: AppHandle) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || app.storage().device_name().map_err(|e| e.to_string()))
+        .await
+        .map_err(|e| format!("device name join failed: {e}"))?
+}
+
 /// Largest the on-disk thumbnail cache may grow before the least recently shown are removed.
 const THUMB_CACHE_MAX_BYTES: u64 = 200 * 1024 * 1024;
 /// Largest single thumbnail accepted from the webview.
@@ -868,6 +876,7 @@ pub fn run() {
             file_share,
             thumb_path,
             thumb_save,
+            device_name,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")

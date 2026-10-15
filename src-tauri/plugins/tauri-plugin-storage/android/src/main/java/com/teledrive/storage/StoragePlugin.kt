@@ -6,6 +6,7 @@ import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.Settings
 import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.MediaStore
@@ -210,6 +211,18 @@ class StoragePlugin(private val activity: Activity) : Plugin(activity) {
             return
         }
         invoke.resolve(JSObject().apply { put("data", Base64.encodeToString(buffer.array(), Base64.NO_WRAP)) })
+    }
+
+    /** The phone's own name (as set in Android), or manufacturer and model when none is set. */
+    @Command
+    fun deviceName(invoke: Invoke) {
+        val userName = Settings.Global.getString(activity.contentResolver, "device_name")
+        val fallback = listOf(Build.MANUFACTURER, Build.MODEL)
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+            .replaceFirstChar { it.uppercase() }
+        val name = if (!userName.isNullOrBlank()) userName else fallback
+        invoke.resolve(JSObject().apply { put("name", name) })
     }
 
     private fun hasMediaAccess(kind: String): Boolean {

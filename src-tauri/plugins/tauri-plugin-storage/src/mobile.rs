@@ -44,6 +44,12 @@ impl<R: Runtime> Storage<R> {
     Ok(())
   }
 
+  /// The phone's name as set in Android, or manufacturer and model.
+  pub fn device_name(&self) -> Result<String> {
+    let res: serde_json::Value = self.0.run_mobile_plugin("deviceName", serde_json::json!({}))?;
+    Ok(res.get("name").and_then(|v| v.as_str()).unwrap_or_default().to_string())
+  }
+
   /// Lists photos (`kind = "images"`) or videos (`kind = "videos"`) from MediaStore.
   pub fn list_media(&self, kind: &str) -> Result<serde_json::Value> {
     self

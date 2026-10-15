@@ -446,10 +446,12 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
       filtered = [...indexedFiles];
     }
 
+    // Type filters (Images, Videos, Audio) search the whole drive or backups scope, subfolders included.
+    const typeScope = mode === "drive" || mode === "backups" ? dedupedActiveFiles : filtered;
     const visibleFiles =
       filterType === "All"
         ? filtered
-        : filtered.filter((f) => !isDirectory(f) && getFileCategory(f.name, f.mime) === filterType);
+        : typeScope.filter((f) => !isDirectory(f) && getFileCategory(f.name, f.mime) === filterType);
 
     visibleFiles.sort((a, b) => {
       const aIsDir = isDirectory(a);

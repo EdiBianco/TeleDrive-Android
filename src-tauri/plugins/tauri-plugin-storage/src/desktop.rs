@@ -17,6 +17,10 @@ impl<R: Runtime> Storage<R> {
     Err(Error::Message("Android storage sources are not available on this platform".into()))
   }
 
+  pub fn device_name(&self) -> Result<String> {
+    Err(Error::Message("Android storage sources are not available on this platform".into()))
+  }
+
   pub fn request_media(&self) -> Result<()> {
     Err(Error::Message("Android storage sources are not available on this platform".into()))
   }
