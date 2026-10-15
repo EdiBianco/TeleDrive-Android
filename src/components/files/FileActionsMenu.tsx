@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Share2,
 } from "lucide-react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { openOrShareFile } from "@/lib/files/openShare";
 import { TeleFile } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -60,6 +61,9 @@ export const FileActionsMenu = React.memo(function FileActionsMenu({
   onOfflineToggle,
 }: FileActionsMenuProps) {
   const isDirectory = file.mime === "inode/directory" || file.mime === "application/x-directory";
+  const isMobile = useIsMobile();
+  // On phones the bottom sheet is the only action surface.
+  if (isMobile) return null;
 
   return (
     <DropdownMenu>

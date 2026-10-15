@@ -25,6 +25,8 @@ import {
   Plus,
   MoreHorizontal,
   Shield,
+  ExternalLink,
+  Share2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -60,6 +62,7 @@ import { collapseDuplicateFolders, dedupeByContentKey, dedupeByMessageId, folder
 import { isBackupItem, BACKUP_ROOT, BACKUP_ROOT_PREFIX } from "@/lib/backup/visibility";
 import { toast } from "sonner";
 import { usePinchColumns } from "@/hooks/usePinchColumns";
+import { openOrShareFile } from "@/lib/files/openShare";
 import ThumbImage from "./ThumbImage";
 
 // ---------------------------------------------------------------------------
@@ -1165,7 +1168,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
                         onTouchMove={handleTouchEndItem}
                         style={{ animationDelay: `${Math.min(folders.length + index, 15) * 20}ms` }}
                         className={cn(
-                          "group relative flex flex-col rounded-2xl transition-all duration-150 cursor-pointer overflow-hidden text-left select-none h-52 bg-white dark:bg-[#1e1f20] hover:bg-[#f8fafd] dark:hover:bg-[#282a2c] border border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md",
+                          "group relative flex flex-col rounded-2xl transition-all duration-150 cursor-pointer overflow-hidden text-left select-none [container-type:inline-size] bg-white dark:bg-[#1e1f20] hover:bg-[#f8fafd] dark:hover:bg-[#282a2c] border border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md",
                           isSelected
                             ? "bg-[#c2e7ff]/30 dark:bg-[#004a77]/30 ring-2 ring-[#0b57d0] dark:ring-[#a8c7fa] border-transparent shadow-xs"
                             : "",
@@ -1173,10 +1176,10 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
                         )}
                       >
                         {/* Top bar with mini typed icon, title, and action menu */}
-                        <div className="flex items-center justify-between gap-1.5 px-3.5 pt-3 pb-1 shrink-0">
+                        <div className="flex items-center justify-between gap-1.5 px-[3.5cqw] pt-[3cqw] pb-[1cqw] shrink-0">
                           <div className="flex items-center gap-2 min-w-0 flex-1 pointer-events-none">
                             <FileIcon name={file.name} mime={file.mime} size="sm" bare className="shrink-0" />
-                            <p className="text-xs font-medium text-[#1f1f1f] dark:text-[#e3e3e3] truncate">
+                            <p className="text-[clamp(10px,3.6cqw,15px)] font-medium text-[#1f1f1f] dark:text-[#e3e3e3] truncate">
                               {file.name}
                             </p>
                           </div>
@@ -1198,9 +1201,9 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
                         </div>
 
                         {/* Centered Preview Canvas */}
-                        <div className="flex-1 bg-[#f8fafd] dark:bg-[#131314]/80 mx-2.5 my-1 rounded-xl border border-slate-100 dark:border-slate-800/80 flex items-center justify-center relative overflow-hidden pointer-events-none">
+                        <div className="aspect-[4/3] bg-[#f8fafd] dark:bg-[#131314]/80 mx-[2.5cqw] my-[1cqw] rounded-xl border border-slate-100 dark:border-slate-800/80 flex items-center justify-center relative overflow-hidden pointer-events-none">
                           <ThumbImage file={file}>
-                            <div className="w-16 h-20 bg-white dark:bg-[#202124] rounded-md shadow-xs border border-slate-200/80 dark:border-slate-700/80 p-2 flex flex-col items-center justify-between pointer-events-none select-none">
+                            <div className="w-[26cqw] h-[34cqw] bg-white dark:bg-[#202124] rounded-md shadow-xs border border-slate-200/80 dark:border-slate-700/80 p-2 flex flex-col items-center justify-between pointer-events-none select-none">
                               <div className="w-full space-y-1 mt-0.5 opacity-40">
                                 <div className="h-0.5 bg-slate-300 dark:bg-slate-600 rounded-full w-full" />
                                 <div className="h-0.5 bg-slate-300 dark:bg-slate-600 rounded-full w-4/5" />
@@ -1225,7 +1228,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
                         </div>
 
                         {/* Bottom details footer */}
-                        <div className="px-3.5 py-2 flex items-center justify-between text-[11px] text-[#747775] dark:text-[#8e918f] pointer-events-none shrink-0 font-normal">
+                        <div className="px-[3.5cqw] py-[2cqw] flex items-center justify-between text-[clamp(9px,3.2cqw,13px)] text-[#747775] dark:text-[#8e918f] pointer-events-none shrink-0 font-normal">
                           <span>{formatFileSize(file.size)}</span>
                           <span>{new Date(file.uploadedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
                         </div>
@@ -1598,6 +1601,32 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
                     >
                       <Download className="h-4 w-4 text-slate-500" />
                       <span>Download</span>
+                    </button>
+                  )}
+                  {mobileContextFile.mime !== "inode/directory" && mobileContextFile.mime !== "application/x-directory" && !mobileContextFile.trashed && (
+                    <button
+                      onClick={() => {
+                        const f = mobileContextFile;
+                        setMobileContextFile(null);
+                        void openOrShareFile(f, "open");
+                      }}
+                      className="flex items-center gap-3 px-3 py-3 text-sm rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-left font-semibold text-slate-700 dark:text-slate-200 border-0 cursor-pointer"
+                    >
+                      <ExternalLink className="h-4 w-4 text-slate-500" />
+                      <span>Open with…</span>
+                    </button>
+                  )}
+                  {mobileContextFile.mime !== "inode/directory" && mobileContextFile.mime !== "application/x-directory" && !mobileContextFile.trashed && (
+                    <button
+                      onClick={() => {
+                        const f = mobileContextFile;
+                        setMobileContextFile(null);
+                        void openOrShareFile(f, "share");
+                      }}
+                      className="flex items-center gap-3 px-3 py-3 text-sm rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-left font-semibold text-slate-700 dark:text-slate-200 border-0 cursor-pointer"
+                    >
+                      <Share2 className="h-4 w-4 text-slate-500" />
+                      <span>Share</span>
                     </button>
                   )}
                   {mobileContextFile.mime !== "inode/directory" && mobileContextFile.mime !== "application/x-directory" && !mobileContextFile.trashed && (
