@@ -150,6 +150,8 @@ export interface BackupManifest {
   lastRunAt: number | null;
   /** Map of absolute local path → ManifestEntry. */
   entries: Record<string, ManifestEntry>;
+  /** Storage channel these uploads went to. A different channel means none of the entries apply. */
+  channelId?: string;
 }
 
 /**

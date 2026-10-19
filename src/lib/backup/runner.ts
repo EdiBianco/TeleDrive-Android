@@ -369,6 +369,11 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
       finishedAt: Date.now(),
     };
   }
+  // The manifest records uploads into one storage channel. If the channel has changed
+  // (replaced or reset), none of those uploads exist in the current channel, so start over.
+  if (manifest.channelId !== channelId) {
+    manifest = { ...emptyManifest(), channelId };
+  }
   if (!manifest.deviceName) {
     manifest = {
       ...manifest,
