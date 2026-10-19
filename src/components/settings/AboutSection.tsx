@@ -21,6 +21,7 @@ import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { checkForUpdate } from "@/lib/updater/updater";
+import { getThumbStats } from "@/lib/telegram/thumbnails";
 import { useUpdateStore } from "@/stores/updateStore";
 
 export default function AboutSection() {
@@ -96,6 +97,15 @@ export default function AboutSection() {
             <p className="text-xs text-[#747775]">
               Virtual cloud storage client backed by Telegram
             </p>
+            {(() => {
+              const t = getThumbStats();
+              return (
+                <p className="text-[11px] text-[#747775]">
+                  Thumbnails: {t.diskHits} from cache, {t.telegramThumbs + t.fullDownloads} downloaded, {t.noThumbnail} without one, {t.failed} failed
+                  {t.lastError ? ` (${t.lastError})` : ""}
+                </p>
+              );
+            })()}
           </div>
         </div>
 

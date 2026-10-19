@@ -21,6 +21,10 @@ impl<R: Runtime> Storage<R> {
     Err(Error::Message("Android storage sources are not available on this platform".into()))
   }
 
+  pub fn thumbnail(&self, _uri: &str, _mime: &str) -> Result<Vec<u8>> {
+    Err(Error::Message("Android storage sources are not available on this platform".into()))
+  }
+
   pub fn request_media(&self) -> Result<()> {
     Err(Error::Message("Android storage sources are not available on this platform".into()))
   }
