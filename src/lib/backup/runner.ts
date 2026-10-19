@@ -60,6 +60,7 @@ import { enqueueSave } from "../storage/indexQueue";
 import { isHardError } from "../telegram/rateLimit";
 import { reconstructMissingFolders } from "../storage/metadataStore";
 import type { TeleFile } from "../types";
+import { invoke } from "@tauri-apps/api/core";
 
 /**
  * Breather between batches. After every BACKUP_BATCH_SIZE successful
@@ -517,6 +518,17 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
         folderPath,
       });
       await saveManifest(manifest);
+
+      // Android sources: build a thumbnail from the phone's own copy and cache it, so this
+      // device never downloads the file back just to show it. Failure is harmless.
+      if (file.absPath.startsWith("content://")) {
+        void invoke("thumb_from_source", {
+          channelId,
+          messageId,
+          uri: file.absPath,
+          mime: guessMimeFromName(fileName),
+        }).catch(() => {});
+      }
 
       // Tier 1 — T1.1: write the new TeleFile to the in-memory file store
       // AND route an enqueueSave through the shared IndexQueue. Mirrors the

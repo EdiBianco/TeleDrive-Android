@@ -1170,7 +1170,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
                         onTouchMove={handleTouchEndItem}
                         style={{ animationDelay: `${Math.min(folders.length + index, 15) * 20}ms`, ...pinch.itemStyle }}
                         className={cn(
-                          "group relative flex flex-col rounded-2xl transition-all duration-150 cursor-pointer overflow-hidden text-left select-none [container-type:inline-size] bg-white dark:bg-[#1e1f20] hover:bg-[#f8fafd] dark:hover:bg-[#282a2c] border border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md",
+                          "group relative flex flex-col rounded-2xl transition-all duration-150 cursor-pointer overflow-hidden text-left select-none [container-type:inline-size] [content-visibility:auto] aspect-[100/108] bg-white dark:bg-[#1e1f20] hover:bg-[#f8fafd] dark:hover:bg-[#282a2c] border border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md",
                           isSelected
                             ? "bg-[#c2e7ff]/30 dark:bg-[#004a77]/30 ring-2 ring-[#0b57d0] dark:ring-[#a8c7fa] border-transparent shadow-xs"
                             : "",
@@ -1204,7 +1204,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
 
                         {/* Centered Preview Canvas */}
                         <div className="aspect-[4/3] bg-[#f8fafd] dark:bg-[#131314]/80 mx-[2.5cqw] my-[1cqw] rounded-xl border border-slate-100 dark:border-slate-800/80 flex items-center justify-center relative overflow-hidden pointer-events-none">
-                          <ThumbImage file={file}>
+                          <ThumbImage file={file} large={pinch.columns <= 2}>
                             <div className="w-[26cqw] h-[34cqw] bg-white dark:bg-[#202124] rounded-md shadow-xs border border-slate-200/80 dark:border-slate-700/80 p-2 flex flex-col items-center justify-between pointer-events-none select-none">
                               <div className="w-full space-y-1 mt-0.5 opacity-40">
                                 <div className="h-0.5 bg-slate-300 dark:bg-slate-600 rounded-full w-full" />

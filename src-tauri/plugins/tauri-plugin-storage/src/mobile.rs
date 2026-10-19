@@ -66,6 +66,15 @@ impl<R: Runtime> Storage<R> {
       .map_err(Into::into)
   }
 
+  /// A JPEG thumbnail (long edge up to 512 px) of a local photo or video.
+  pub fn thumbnail(&self, uri: &str, mime: &str) -> Result<Vec<u8>> {
+    let res: serde_json::Value = self
+      .0
+      .run_mobile_plugin("thumbnail", serde_json::json!({ "uri": uri, "mime": mime }))?;
+    let encoded = field_str(&res, "data")?;
+    base64::decode(encoded).map_err(|e| Error::Message(format!("thumbnail decode failed: {e}")))
+  }
+
   /// Reads exactly `length` bytes at `offset` from a `content://` URI.
   pub fn read_chunk(&self, uri: &str, offset: u64, length: u64) -> Result<Vec<u8>> {
     let res: serde_json::Value = self

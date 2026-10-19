@@ -10,10 +10,15 @@ import android.provider.Settings
 import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.MediaMetadataRetriever
 import android.util.Base64
 import androidx.activity.result.ActivityResult
 import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
+import androidx.exifinterface.media.ExifInterface
 import app.tauri.annotation.ActivityCallback
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
@@ -24,10 +29,13 @@ import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.FileInputStream
+import java.io.InputStream
 import java.nio.ByteBuffer
 
 private const val EXTERNAL_STORAGE_AUTHORITY = "com.android.externalstorage.documents"
+private const val THUMB_EDGE = 512
 
 @InvokeArg
 class PickArgs {
@@ -42,6 +50,12 @@ class MediaArgs {
 @InvokeArg
 class UriArgs {
     var uri: String? = null
+}
+
+@InvokeArg
+class ThumbArgs {
+    var uri: String? = null
+    var mime: String? = null
 }
 
 @InvokeArg
@@ -223,6 +237,82 @@ class StoragePlugin(private val activity: Activity) : Plugin(activity) {
             .replaceFirstChar { it.uppercase() }
         val name = if (!userName.isNullOrBlank()) userName else fallback
         invoke.resolve(JSObject().apply { put("name", name) })
+    }
+
+    /** A JPEG thumbnail (long edge up to 512 px) of a local photo or video, as base64. */
+    @Command
+    fun thumbnail(invoke: Invoke) {
+        val args = invoke.parseArgs(ThumbArgs::class.java)
+        val uri = args.uri
+        if (uri == null) {
+            invoke.reject("missing uri")
+            return
+        }
+        val mime = args.mime ?: ""
+        val bitmap = try {
+            if (mime.startsWith("video/")) videoFrame(Uri.parse(uri)) else photo(Uri.parse(uri))
+        } catch (ex: Exception) {
+            null
+        }
+        if (bitmap == null) {
+            invoke.reject("no thumbnail available")
+            return
+        }
+        val out = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+        bitmap.recycle()
+        invoke.resolve(JSObject().apply { put("data", Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)) })
+    }
+
+    /** Decodes a photo at reduced size (low memory), then fixes its rotation. */
+    private fun photo(uri: Uri): Bitmap? {
+        val resolver = activity.contentResolver
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        val longest = maxOf(bounds.outWidth, bounds.outHeight)
+        if (longest <= 0) return null
+        var sample = 1
+        while (longest / (sample * 2) >= THUMB_EDGE) sample *= 2
+        val decoded = resolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+        } ?: return null
+        val rotation = resolver.openInputStream(uri)?.use { exifRotation(it) } ?: 0
+        return scaled(decoded, rotation)
+    }
+
+    private fun exifRotation(stream: InputStream): Int {
+        val orientation = ExifInterface(stream)
+            .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        return when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270
+            else -> 0
+        }
+    }
+
+    private fun videoFrame(uri: Uri): Bitmap? {
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(activity, uri)
+            val frame = retriever.getFrameAtTime(1_000_000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                ?: retriever.getFrameAtTime()
+                ?: return null
+            return scaled(frame, 0)
+        } finally {
+            retriever.release()
+        }
+    }
+
+    private fun scaled(source: Bitmap, rotationDegrees: Int): Bitmap {
+        val factor = minOf(1f, THUMB_EDGE.toFloat() / maxOf(source.width, source.height))
+        val matrix = Matrix().apply {
+            postScale(factor, factor)
+            if (rotationDegrees != 0) postRotate(rotationDegrees.toFloat())
+        }
+        val result = Bitmap.createBitmap(source, 0, 0, source.width, source.height, matrix, true)
+        if (result !== source) source.recycle()
+        return result
     }
 
     private fun hasMediaAccess(kind: String): Boolean {

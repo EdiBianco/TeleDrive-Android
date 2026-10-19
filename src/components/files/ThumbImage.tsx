@@ -1,32 +1,60 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { TeleFile } from "@/lib/types";
-import { loadThumbnail } from "@/lib/telegram/thumbnails";
+import { requestThumbnail, type ThumbRequest } from "@/lib/telegram/thumbnails";
 
-/** Shows a Telegram thumbnail for images and videos once the card scrolls into view; otherwise `children`. */
-export default function ThumbImage({ file, children }: { file: TeleFile; children: ReactNode }) {
+/**
+ * Shows a thumbnail for images and videos while the card is on screen. It asks for Telegram's
+ * small thumbnail first and, when `large` is set (big cards), upgrades to a sharper one.
+ * Requests for cards that scroll away are dropped. Otherwise shows `children`.
+ */
+export default function ThumbImage({
+  file,
+  large = false,
+  children,
+}: {
+  file: TeleFile;
+  large?: boolean;
+  children: ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [url, setUrl] = useState<string | null>(null);
-  const eligible = file.mime.startsWith("image/") || file.mime.startsWith("video/");
+  const isImage = file.mime.startsWith("image/");
+  const eligible = isImage || file.mime.startsWith("video/");
+  const wantLarge = large && isImage;
 
   useEffect(() => {
     if (!eligible || !ref.current) return;
     let cancelled = false;
+    let pending: ThumbRequest[] = [];
+    const ask = (tier: "small" | "large") => {
+      const request = requestThumbnail(file.channelId, file.messageId, file.mime, tier);
+      pending.push(request);
+      void request.promise.then((found) => {
+        if (!cancelled && found) setUrl(found);
+      });
+    };
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry.isIntersecting) return;
-        observer.disconnect();
-        void loadThumbnail(file.channelId, file.messageId).then((found) => {
-          if (!cancelled && found) setUrl(found);
-        });
+        if (entry.isIntersecting) {
+          if (pending.length === 0) {
+            ask("small");
+            if (wantLarge) ask("large");
+          }
+        } else {
+          // Scrolled away: drop anything that has not started.
+          pending.forEach((request) => request.cancel());
+          pending = [];
+        }
       },
-      { rootMargin: "200px" },
+      { rootMargin: "300px" },
     );
     observer.observe(ref.current);
     return () => {
       cancelled = true;
       observer.disconnect();
+      pending.forEach((request) => request.cancel());
     };
-  }, [file.channelId, file.messageId, eligible]);
+  }, [file.channelId, file.messageId, file.mime, eligible, wantLarge]);
 
   return (
     <div ref={ref} className="w-full h-full flex items-center justify-center">

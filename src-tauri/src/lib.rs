@@ -517,7 +517,7 @@ async fn device_name(app: AppHandle) -> Result<String, String> {
 
 /// Largest the on-disk thumbnail cache may grow before the least recently shown are removed.
 const THUMB_CACHE_MAX_BYTES: u64 = 200 * 1024 * 1024;
-/// Largest single thumbnail accepted from the webview.
+/// Largest single thumbnail accepted from the webview or the phone.
 const THUMB_MAX_BYTES: usize = 2 * 1024 * 1024;
 
 fn thumb_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -530,12 +530,21 @@ fn thumb_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
-/// File name per channel and message: "<channel>_<message>.jpg". Channel ids are numeric.
-fn thumb_file_name(channel_id: &str, message_id: i64) -> Result<String, String> {
+/// "<channel>_<message>": channel ids are numeric (optionally negative).
+fn thumb_stem(channel_id: &str, message_id: i64) -> Result<String, String> {
     if channel_id.is_empty() || !channel_id.chars().all(|c| c.is_ascii_digit() || c == '-') {
         return Err("invalid channel id".into());
     }
-    Ok(format!("{channel_id}_{message_id}.jpg"))
+    Ok(format!("{channel_id}_{message_id}"))
+}
+
+/// Tiers: "s" is Telegram's small thumbnail, "l" is a sharper 512 px one.
+fn thumb_tier(tier: &str) -> Result<&'static str, String> {
+    match tier {
+        "s" => Ok("s"),
+        "l" => Ok("l"),
+        _ => Err("invalid thumbnail tier".into()),
+    }
 }
 
 /// Removes the least recently used thumbnails until the cache is under the cap.
@@ -566,37 +575,88 @@ fn prune_thumbs(dir: &Path) {
     }
 }
 
-/// Path of a cached thumbnail, or null if none. Marks it as recently used.
-#[tauri::command]
-fn thumb_path(app: AppHandle, channel_id: String, message_id: i64) -> Result<Option<String>, String> {
-    let path = thumb_dir(&app)?.join(thumb_file_name(&channel_id, message_id)?);
-    if !path.is_file() {
-        return Ok(None);
+/// Writes a thumbnail atomically and prunes the cache. Returns the file path.
+fn write_thumb(dir: &Path, stem: &str, tier: &str, data: &[u8]) -> Result<String, String> {
+    if data.is_empty() || data.len() > THUMB_MAX_BYTES {
+        return Err("thumbnail size out of range".into());
     }
-    if let Ok(file) = std::fs::File::open(&path) {
-        let _ = file.set_modified(SystemTime::now());
-    }
-    Ok(Some(path.to_string_lossy().into_owned()))
+    let path = dir.join(format!("{stem}_{tier}.jpg"));
+    let tmp = dir.join(format!("{stem}_{tier}.part"));
+    std::fs::write(&tmp, data).map_err(|e| format!("write thumbnail failed: {e}"))?;
+    std::fs::rename(&tmp, &path).map_err(|e| format!("save thumbnail failed: {e}"))?;
+    prune_thumbs(dir);
+    Ok(path.to_string_lossy().into_owned())
 }
 
-/// Stores a thumbnail (atomically) and prunes the cache. Returns the cached file path.
+#[derive(serde::Serialize)]
+struct ThumbLookup {
+    small: Option<String>,
+    large: Option<String>,
+    /// True when an earlier attempt found this file has no thumbnail, so it is not retried.
+    none: bool,
+}
+
+/// What the cache holds for one file. Marks any hit as recently used.
+#[tauri::command]
+fn thumb_lookup(app: AppHandle, channel_id: String, message_id: i64) -> Result<ThumbLookup, String> {
+    let dir = thumb_dir(&app)?;
+    let stem = thumb_stem(&channel_id, message_id)?;
+    let find = |tier: &str| -> Option<String> {
+        let path = dir.join(format!("{stem}_{tier}.jpg"));
+        if !path.is_file() {
+            return None;
+        }
+        if let Ok(file) = std::fs::File::open(&path) {
+            let _ = file.set_modified(SystemTime::now());
+        }
+        Some(path.to_string_lossy().into_owned())
+    };
+    Ok(ThumbLookup {
+        small: find("s"),
+        large: find("l"),
+        none: dir.join(format!("{stem}.none")).is_file(),
+    })
+}
+
+/// Stores a thumbnail made in the webview.
 #[tauri::command]
 fn thumb_save(
     app: AppHandle,
     channel_id: String,
     message_id: i64,
+    tier: String,
     data: Vec<u8>,
 ) -> Result<String, String> {
-    if data.is_empty() || data.len() > THUMB_MAX_BYTES {
-        return Err("thumbnail size out of range".into());
-    }
     let dir = thumb_dir(&app)?;
-    let path = dir.join(thumb_file_name(&channel_id, message_id)?);
-    let tmp = dir.join(format!("{}.part", thumb_file_name(&channel_id, message_id)?));
-    std::fs::write(&tmp, &data).map_err(|e| format!("write thumbnail failed: {e}"))?;
-    std::fs::rename(&tmp, &path).map_err(|e| format!("save thumbnail failed: {e}"))?;
-    prune_thumbs(&dir);
-    Ok(path.to_string_lossy().into_owned())
+    write_thumb(&dir, &thumb_stem(&channel_id, message_id)?, thumb_tier(&tier)?, &data)
+}
+
+/// Records that this file has no usable thumbnail.
+#[tauri::command]
+fn thumb_mark_none(app: AppHandle, channel_id: String, message_id: i64) -> Result<(), String> {
+    let dir = thumb_dir(&app)?;
+    let stem = thumb_stem(&channel_id, message_id)?;
+    std::fs::write(dir.join(format!("{stem}.none")), b"").map_err(|e| format!("mark failed: {e}"))
+}
+
+/// Builds a 512 px thumbnail from the phone's own copy of a file (a content:// URI) and caches
+/// it, so this device never has to download the file back just to show it.
+#[tauri::command]
+async fn thumb_from_source(
+    app: AppHandle,
+    channel_id: String,
+    message_id: i64,
+    uri: String,
+    mime: String,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let stem = thumb_stem(&channel_id, message_id)?;
+        let bytes = app.storage().thumbnail(&uri, &mime).map_err(|e| e.to_string())?;
+        let dir = thumb_dir(&app)?;
+        write_thumb(&dir, &stem, "l", &bytes)
+    })
+    .await
+    .map_err(|e| format!("thumbnail join failed: {e}"))?
 }
 
 /// A newer published release than the installed app.
@@ -874,8 +934,10 @@ pub fn run() {
             shared_file_path,
             file_open,
             file_share,
-            thumb_path,
+            thumb_lookup,
             thumb_save,
+            thumb_mark_none,
+            thumb_from_source,
             device_name,
         ])
         .run(tauri::generate_context!())
