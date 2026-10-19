@@ -32,6 +32,7 @@ interface FileState {
   indexQueueRetryInSec: number;
   /** Human-readable detail of the last hard failure (null when healthy). */
   indexQueueError: string | null;
+  indexLoadError: string | null;
   /**
    * True once the initial loadIndex + setFiles has completed.
    * Stays true for the rest of the session. Used to suppress user actions
@@ -74,6 +75,7 @@ interface FileState {
   setIndexQueueState: (state: IndexQueueState) => void;
   setIndexQueueRetryInSec: (secs: number) => void;
   setIndexQueueError: (err: string | null) => void;
+  setIndexLoadError: (err: string | null) => void;
   /** Mark initial bootstrap (loadIndex → setFiles) as complete. */
   setBootstrapComplete: (v: boolean) => void;
   /**
@@ -132,6 +134,7 @@ export const useFileStore = create<FileState>((set, get) => ({
   indexQueueState: "idle",
   indexQueueRetryInSec: 0,
   indexQueueError: null,
+  indexLoadError: null,
   bootstrapComplete: initialFiles.length > 0 || wasBootstrapCompleted,
   lastIndexMsgId: 0,
   lastRemoteSyncAt: null,
@@ -193,6 +196,7 @@ export const useFileStore = create<FileState>((set, get) => ({
   setIndexQueueRetryInSec: (indexQueueRetryInSec) =>
     set({ indexQueueRetryInSec }),
   setIndexQueueError: (indexQueueError) => set({ indexQueueError }),
+  setIndexLoadError: (indexLoadError) => set({ indexLoadError }),
   setBootstrapComplete: (bootstrapComplete) => {
     if (bootstrapComplete && typeof sessionStorage !== "undefined") {
       sessionStorage.setItem("teledrive_bootstrap_done", "true");

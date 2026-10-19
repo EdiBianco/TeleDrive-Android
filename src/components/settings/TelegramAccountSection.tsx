@@ -303,6 +303,7 @@ export default function TelegramAccountSection() {
                   setChannelId(newId);
                   try {
                     localStorage.removeItem("teledrive_cached_files");
+                    localStorage.removeItem("teledrive_had_files");
                   } catch {
                     // Storage unavailable; the cache is rebuilt from the new channel anyway.
                   }

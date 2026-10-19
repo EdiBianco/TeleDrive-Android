@@ -569,7 +569,7 @@ export function pickCoherentIndexSet(
  *   - mixed-version channels: Frankenstein-merging across epochs is
  *     avoided — only fully-coherent sets are considered.
  */
-export async function loadIndex(channelId: string): Promise<TeleFile[]> {
+async function loadIndexInner(channelId: string): Promise<TeleFile[]> {
   const client = getClient();
   let peer: any;
 
@@ -577,6 +577,9 @@ export async function loadIndex(channelId: string): Promise<TeleFile[]> {
     peer = await resolveChannelInputPeer(channelId);
   } catch (err) {
     console.error("[metadataStore] Failed to resolve channel entity:", err);
+    useFileStore.getState().setIndexLoadError(
+      "Can't open the storage channel. It may have been deleted or left."
+    );
     throw err;
   }
 
@@ -610,10 +613,21 @@ export async function loadIndex(channelId: string): Promise<TeleFile[]> {
 
   if (allMsgs.length === 0) {
     console.error("[metadataStore] No messages loaded from channel");
+    const hadFiles = localStorage.getItem("teledrive_had_files") === "1";
+    useFileStore.getState().setIndexLoadError(
+      hadFiles
+        ? "The storage channel is empty. Its files were deleted in Telegram."
+        : null
+    );
     return [];
   }
 
   const chosenSet = pickCoherentIndexSet(allMsgs, channelId);
+  if (!chosenSet && allMsgs.some((m) => String(m?.text ?? "").includes("teledrive_index"))) {
+    useFileStore.getState().setIndexLoadError(
+      "The file list in the storage channel can't be read. It may have been written by a newer app version, or it's damaged."
+    );
+  }
   if (!chosenSet) {
     console.warn(
       `[metadataStore] No coherent index set found across ${allMsgs.length} message(s); falling back to best-effort merge.`
@@ -646,6 +660,16 @@ export async function loadIndex(channelId: string): Promise<TeleFile[]> {
     channelId,
     collapseDuplicateFolders(dedupeByContentKey(dedupeByMessageId(Array.from(byId.values()))))
   );
+}
+
+/** Loads the file list and clears the on-screen load error when it succeeds. */
+export async function loadIndex(channelId: string): Promise<TeleFile[]> {
+  const files = await loadIndexInner(channelId);
+  if (files.length > 0) {
+    localStorage.setItem("teledrive_had_files", "1");
+    useFileStore.getState().setIndexLoadError(null);
+  }
+  return files;
 }
 
 // ---------------------------------------------------------------------------
