@@ -75,6 +75,14 @@ export async function ensureStorageChannel(phone: string): Promise<string> {
   }
 
   // ── 4. Create a new private channel (first-ever login for this account) ──
+  const idStr = await createStorageChannel();
+  await saveSecret(phoneKey, idStr);
+  return idStr;
+}
+
+/** Creates a new private storage channel and returns its id. Does not save it. */
+export async function createStorageChannel(): Promise<string> {
+  const client = getClient();
   try {
     const result = await client.invoke(
       new Api.channels.CreateChannel({
@@ -91,13 +99,22 @@ export async function ensureStorageChannel(phone: string): Promise<string> {
     }
 
     const idStr = String(channel.id);
-    await saveSecret(phoneKey, idStr);
-    console.info(`[channelManager] Created new channel: ${idStr} for ${phoneKey}`);
+    console.info(`[channelManager] Created new channel: ${idStr}`);
     return idStr;
   } catch (err) {
     console.error("[channelManager] Failed to create storage channel:", err);
     throw err;
   }
+}
+
+/**
+ * Replaces this phone's storage channel with a brand-new one. The old channel is not
+ * touched; it is simply no longer used. Use when the old channel was deleted or emptied.
+ */
+export async function replaceStorageChannel(phone: string): Promise<string> {
+  const idStr = await createStorageChannel();
+  await saveSecret(channelIdKey(phone), idStr);
+  return idStr;
 }
 
 /**

@@ -18,6 +18,7 @@ import {
   VAULT_KEY_CHANNEL_ID,
   channelIdKey,
 } from "@/lib/secure/vault";
+import { replaceStorageChannel } from "@/lib/telegram/channelManager";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -295,12 +296,18 @@ export default function TelegramAccountSection() {
               onClick={async () => {
                 setIsDialogOpen(false);
                 try {
-                  if (phoneNumber) {
-                    await deleteSecret(channelIdKey(phoneNumber)).catch(() => {});
-                  }
+                  if (!phoneNumber) throw new Error("No phone number on this account");
+                  toast.loading("Creating a new storage channel…", { id: "reset-channel" });
+                  const newId = await replaceStorageChannel(phoneNumber);
                   await deleteSecret(VAULT_KEY_CHANNEL_ID).catch(() => {});
-                  setChannelId(null);
-                  toast.success("Storage channel reset. Restart the app to re-map it.");
+                  setChannelId(newId);
+                  try {
+                    localStorage.removeItem("teledrive_cached_files");
+                  } catch {
+                    // Storage unavailable; the cache is rebuilt from the new channel anyway.
+                  }
+                  toast.success("New storage channel created. Reloading…", { id: "reset-channel" });
+                  setTimeout(() => window.location.reload(), 800);
                 } catch (err) {
                   console.error("Failed to reset storage channel:", err);
                   toast.error("Failed to reset storage channel.");
