@@ -134,6 +134,7 @@ const IndexQueuePill = React.memo(function IndexQueuePill() {
 });
 
 export default function DriveLayout() {
+  const indexLoadError = useFileStore((state) => state.indexLoadError);
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
@@ -676,6 +677,14 @@ export default function DriveLayout() {
         </div>
       </header>
 
+      {indexLoadError && (
+        <div role="alert" className="mx-4 mt-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 p-3 text-xs text-amber-900 dark:text-amber-200">
+          <p className="font-semibold">Can't load your file list</p>
+          <p className="mt-1">{indexLoadError}</p>
+          <p className="mt-2">To fix: open Settings → Telegram Account and tap <strong>Reset storage channel</strong>. Then run a backup again.</p>
+          <Link to="/settings" className="inline-block mt-2 font-semibold underline">Open Settings</Link>
+        </div>
+      )}
       {/* Offline banner */}
       {!isOnline && (
         <div className="bg-amber-500 text-white text-xs font-semibold py-1.5 px-4 flex items-center justify-center gap-2 select-none animate-fade-in shrink-0">
