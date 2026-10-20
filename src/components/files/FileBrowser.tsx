@@ -57,6 +57,7 @@ import {
 import { fuzzySearch } from "@/lib/search/searchEngine";
 import { getFileCategory } from "@/lib/files/fileUtils";
 import { isEditableFile } from "@/lib/files/editableTypes";
+import { isViewable } from "@/components/preview/MediaViewer";
 import { useFileBrowserDragAndDrop } from "@/hooks/useFileBrowserDragAndDrop";
 import { collapseDuplicateFolders, dedupeByContentKey, dedupeByMessageId, folderIdForPath } from "@/lib/storage/metadataStore";
 import { isBackupItem, BACKUP_ROOT, BACKUP_ROOT_PREFIX } from "@/lib/backup/visibility";
@@ -558,8 +559,15 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
   // ── Memoized callbacks ──────────────────────────────────────────────────
 
   const toastPreview = useCallback((file: TeleFile) => {
+    if (isViewable(file)) {
+      const ids = displayFiles.filter((f) => !f.trashed && isViewable(f)).map((f) => f.id);
+      if (ids.includes(file.id)) {
+        window.dispatchEvent(new CustomEvent("teledrive-open-viewer", { detail: { ids, id: file.id } }));
+        return;
+      }
+    }
     window.dispatchEvent(new CustomEvent("teledrive-preview-file", { detail: file }));
-  }, []);
+  }, [displayFiles]);
 
   const handleEdit = useCallback((file: TeleFile) => {
     window.dispatchEvent(new CustomEvent("teledrive-edit-file", { detail: file }));
@@ -717,6 +725,13 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
       window.removeEventListener("teledrive-trigger-create-folder", handleCreateFolderTrigger);
     };
   }, [openRenameDialog, deletePermanently, selectedIds, clearSelection]);
+
+  // The fullscreen viewer's menu reuses this sheet for its file actions.
+  useEffect(() => {
+    const open = (e: Event) => setMobileContextFile((e as CustomEvent<TeleFile>).detail);
+    window.addEventListener("teledrive-viewer-actions", open);
+    return () => window.removeEventListener("teledrive-viewer-actions", open);
+  }, []);
 
   const handleTouchStartItem = (file: TeleFile) => {
     if (!isMobile) return;
@@ -1559,7 +1574,7 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
       </Dialog>
 
       {/* Mobile Context Menu Bottom Sheet */}
-      {isMobile && (
+      {(
         <Sheet open={!!mobileContextFile} onOpenChange={(open) => !open && setMobileContextFile(null)}>
           <SheetContent side="bottom" className="rounded-t-2xl px-6 py-5 max-h-[420px] bg-white dark:bg-slate-900 border-t dark:border-slate-800">
             {mobileContextFile && (

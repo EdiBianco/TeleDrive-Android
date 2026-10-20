@@ -40,6 +40,7 @@ import { UploadProgressPanel } from "@/components/upload/UploadProgressPanel";
 import { BackupProgressOverlay } from "@/components/backup/BackupProgressOverlay";
 import { downloadFileFromTelegram } from "@/lib/telegram/downloader";
 import { FilePreviewModal } from "@/components/preview/FilePreviewModal";
+import { MediaViewer } from "@/components/preview/MediaViewer";
 import { TeleFile } from "@/lib/types";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useIsPro } from "@/hooks/useIsPro";
@@ -153,6 +154,17 @@ export default function DriveLayout() {
 
   const [previewFile, setPreviewFile] = useState<TeleFile | null>(null);
   const [previewInitialEditMode, setPreviewInitialEditMode] = useState(false);
+  const [viewer, setViewer] = useState<{ ids: string[]; index: number } | null>(null);
+  const allFiles = useFileStore((s) => s.files);
+  const viewerFiles = useMemo(() => {
+    if (!viewer) return [];
+    const byId = new Map(allFiles.map((f) => [f.id, f]));
+    return viewer.ids.map((id) => byId.get(id)).filter((f): f is TeleFile => !!f && !f.trashed);
+  }, [viewer, allFiles]);
+  const closeViewer = useCallback(() => {
+    setViewer(null);
+    if (window.history.state?.modal === "viewer") window.history.back();
+  }, []);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -242,7 +254,8 @@ export default function DriveLayout() {
   useEffect(() => {
     const handlePopState = () => {
       // If any modal is active, close them and consume the back action
-      if (shortcutsOpen || mobileActionsOpen || previewFile) {
+      if (shortcutsOpen || mobileActionsOpen || previewFile || viewer) {
+        setViewer(null);
         setShortcutsOpen(false);
         setMobileActionsOpen(false);
         setPreviewFile(null);
@@ -253,7 +266,7 @@ export default function DriveLayout() {
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [shortcutsOpen, mobileActionsOpen, previewFile]);
+  }, [shortcutsOpen, mobileActionsOpen, previewFile, viewer]);
 
   // Hook up keyboard shortcuts
   useKeyboardShortcuts({
@@ -378,6 +391,14 @@ export default function DriveLayout() {
     window.addEventListener("teledrive-trigger-upload", handleUploadTrigger);
     window.addEventListener("teledrive-trigger-folder-upload", handleFolderUploadTrigger);
     window.addEventListener("teledrive-download-file", handleDownloadTrigger);
+    const handleViewerOpen = (e: Event) => {
+      const { ids, id } = (e as CustomEvent<{ ids: string[]; id: string }>).detail;
+      const start = ids.indexOf(id);
+      if (start < 0) return;
+      setViewer({ ids, index: start });
+      window.history.pushState({ ...window.history.state, modal: "viewer" }, "");
+    };
+    window.addEventListener("teledrive-open-viewer", handleViewerOpen);
     window.addEventListener("teledrive-preview-file", handlePreviewTrigger);
     window.addEventListener("teledrive-edit-file", handleEditTrigger);
     window.addEventListener("teledrive-refresh-files", handleRefreshFiles);
@@ -387,6 +408,7 @@ export default function DriveLayout() {
       window.removeEventListener("teledrive-trigger-upload", handleUploadTrigger);
       window.removeEventListener("teledrive-trigger-folder-upload", handleFolderUploadTrigger);
       window.removeEventListener("teledrive-download-file", handleDownloadTrigger);
+      window.removeEventListener("teledrive-open-viewer", handleViewerOpen);
       window.removeEventListener("teledrive-preview-file", handlePreviewTrigger);
       window.removeEventListener("teledrive-edit-file", handleEditTrigger);
       window.removeEventListener("teledrive-refresh-files", handleRefreshFiles);
@@ -817,6 +839,15 @@ export default function DriveLayout() {
           }
         }}
       />
+      {viewer && viewerFiles.length > 0 && (
+        <MediaViewer
+          files={viewerFiles}
+          index={Math.min(viewer.index, viewerFiles.length - 1)}
+          onIndex={(index) => setViewer({ ...viewer, index })}
+          onClose={closeViewer}
+          onMenu={(file) => window.dispatchEvent(new CustomEvent("teledrive-viewer-actions", { detail: file }))}
+        />
+      )}
       <UploadProgressPanel />
       <BackupProgressOverlay />
 

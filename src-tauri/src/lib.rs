@@ -487,6 +487,81 @@ fn shared_file_path(app: AppHandle, name: String) -> Result<String, String> {
     Ok(base.join(safe).to_string_lossy().into_owned())
 }
 
+/// Viewer cache: full-size media played from disk through the asset protocol.
+const VIEWER_CACHE_LIMIT: u64 = 400 * 1024 * 1024;
+
+#[derive(serde::Serialize)]
+struct ViewerEntry {
+    path: String,
+    part: String,
+    ready: bool,
+}
+
+/// Where the viewer keeps one file: <app cache>/viewer/<channel>_<message>.<ext>.
+/// `ready` means a finished copy exists; otherwise write to `part`, then commit.
+#[tauri::command]
+fn viewer_cache_entry(app: AppHandle, channel_id: String, message_id: i64, name: String) -> Result<ViewerEntry, String> {
+    let dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| format!("cache dir unavailable: {e}"))?
+        .join("viewer");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("create viewer dir failed: {e}"))?;
+    let stem = thumb_stem(&channel_id, message_id)?;
+    let ext: String = name
+        .rsplit('.')
+        .next()
+        .filter(|e| e.len() <= 8 && e.chars().all(|c| c.is_ascii_alphanumeric()))
+        .map(|e| e.to_ascii_lowercase())
+        .unwrap_or_default();
+    let file = if ext.is_empty() { stem } else { format!("{stem}.{ext}") };
+    let path = dir.join(&file);
+    if path.is_file() {
+        if let Ok(f) = std::fs::File::open(&path) {
+            let _ = f.set_modified(SystemTime::now());
+        }
+    }
+    Ok(ViewerEntry {
+        ready: path.is_file(),
+        part: dir.join(format!("{file}.part")).to_string_lossy().into_owned(),
+        path: path.to_string_lossy().into_owned(),
+    })
+}
+
+/// Turns a finished `.part` file into the cached copy and trims the cache to its size limit.
+#[tauri::command]
+fn viewer_cache_commit(app: AppHandle, part: String) -> Result<(), String> {
+    let dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| format!("cache dir unavailable: {e}"))?
+        .join("viewer");
+    let part = PathBuf::from(part);
+    if part.parent() != Some(dir.as_path()) || part.extension().and_then(|e| e.to_str()) != Some("part") {
+        return Err("invalid viewer path".into());
+    }
+    std::fs::rename(&part, part.with_extension("")).map_err(|e| format!("commit failed: {e}"))?;
+    let mut entries: Vec<(SystemTime, u64, PathBuf)> = std::fs::read_dir(&dir)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .filter_map(|e| {
+            let md = e.metadata().ok()?;
+            md.is_file().then(|| (md.modified().unwrap_or(SystemTime::UNIX_EPOCH), md.len(), e.path()))
+        })
+        .collect();
+    let mut total: u64 = entries.iter().map(|e| e.1).sum();
+    entries.sort_by_key(|e| e.0);
+    for (_, len, path) in entries {
+        if total <= VIEWER_CACHE_LIMIT {
+            break;
+        }
+        if std::fs::remove_file(&path).is_ok() {
+            total = total.saturating_sub(len);
+        }
+    }
+    Ok(())
+}
+
 /// Opens a staged file with the default app for its type.
 #[tauri::command]
 async fn file_open(app: AppHandle, path: String, mime: String) -> Result<(), String> {
@@ -932,6 +1007,8 @@ pub fn run() {
             update_progress,
             update_install,
             shared_file_path,
+            viewer_cache_entry,
+            viewer_cache_commit,
             file_open,
             file_share,
             thumb_lookup,
