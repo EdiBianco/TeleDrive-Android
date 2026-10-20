@@ -16,7 +16,9 @@ import {
   Upload,
   Sun,
   Moon,
+  X,
 } from "lucide-react";
+import { useDismissedNotice } from "@/hooks/useDismissedNotice";
 import { DriveSidebar } from "./DriveSidebar";
 import { NewActionButton } from "./NewActionButton";
 import { useAuthStore } from "@/stores/authStore";
@@ -135,6 +137,7 @@ const IndexQueuePill = React.memo(function IndexQueuePill() {
 
 export default function DriveLayout() {
   const indexLoadError = useFileStore((state) => state.indexLoadError);
+  const indexNotice = useDismissedNotice(`index-error:${indexLoadError ?? ""}`);
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
@@ -677,8 +680,12 @@ export default function DriveLayout() {
         </div>
       </header>
 
-      {indexLoadError && (
-        <div role="alert" className="mx-4 mt-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 p-3 text-xs text-amber-900 dark:text-amber-200">
+      {indexLoadError && !indexNotice.dismissed && (
+        <div role="alert" className="relative mx-4 mt-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 p-3 pr-9 text-xs text-amber-900 dark:text-amber-200">
+          <button type="button" onClick={indexNotice.dismiss} aria-label="Dismiss" title="Dismiss"
+            className="absolute top-2 right-2 rounded-full p-1 opacity-70 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10">
+            <X className="h-3.5 w-3.5" />
+          </button>
           <p className="font-semibold">Can't load your file list</p>
           <p className="mt-1">{indexLoadError}</p>
           <p className="mt-2">To fix: open Settings → Telegram Account and tap <strong>Reset storage channel</strong>. Then run a backup again.</p>
