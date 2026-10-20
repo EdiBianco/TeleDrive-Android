@@ -120,6 +120,18 @@ const wasBootstrapCompleted =
   typeof sessionStorage !== "undefined" &&
   sessionStorage.getItem("teledrive_bootstrap_done") === "true";
 
+const LAST_BACKUP_KEY = "teledrive_last_backup_at";
+
+/** Last successful backup time, kept across app launches so the label does not reset to "never". */
+function readLastBackupAt(): number | null {
+  try {
+    const value = Number(localStorage.getItem(LAST_BACKUP_KEY));
+    return Number.isFinite(value) && value > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 export const useFileStore = create<FileState>((set, get) => ({
   files: initialFiles,
   currentFolder: "/",
@@ -138,7 +150,7 @@ export const useFileStore = create<FileState>((set, get) => ({
   bootstrapComplete: initialFiles.length > 0 || wasBootstrapCompleted,
   lastIndexMsgId: 0,
   lastRemoteSyncAt: null,
-  lastBackupAt: null,
+  lastBackupAt: readLastBackupAt(),
   setFiles: (rawFiles) => {
     const files = filterJunkFiles(rawFiles);
     debouncedCacheFiles(files);
@@ -234,5 +246,12 @@ export const useFileStore = create<FileState>((set, get) => ({
     });
   },
   setLastIndexMsgId: (msgId) => set({ lastIndexMsgId: msgId }),
-  setLastBackupAt: (ms) => set({ lastBackupAt: ms }),
+  setLastBackupAt: (ms) => {
+    try {
+      localStorage.setItem(LAST_BACKUP_KEY, String(ms));
+    } catch {
+      // Storage unavailable; the label falls back to this session only.
+    }
+    set({ lastBackupAt: ms });
+  },
 }));
