@@ -33,7 +33,7 @@ impl<R: Runtime> Storage<R> {
     Err(Error::Message("Android storage sources are not available on this platform".into()))
   }
 
-  pub fn list_tree(&self, _uri: &str) -> Result<serde_json::Value> {
+  pub fn list_tree(&self, _uri: &str, _skip_dirs: &[String]) -> Result<serde_json::Value> {
     Err(Error::Message("Android storage sources are not available on this platform".into()))
   }
 

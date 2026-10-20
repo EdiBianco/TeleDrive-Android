@@ -39,7 +39,7 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 import type { BackupSourceFolders } from "./sourceFolders";
-import { directoryShouldBeExcluded, normalizeRelativePath, pathMatchesExclude } from "./sourceFolders";
+import { directoryShouldBeExcluded, normalizeRelativePath, pathMatchesExclude, SKIP_DIR_NAMES } from "./sourceFolders";
 import { isJunkFile } from "../storage/fileSanitizer";
 import { isMediaSource, isTreeSource, MEDIA_VIDEOS_ROOT, sourceDisplayName } from "./sourceNames";
 
@@ -62,10 +62,11 @@ async function listSourceEntries(source: string): Promise<RustDirEntry[]> {
     const kind = source === MEDIA_VIDEOS_ROOT ? "videos" : "images";
     return invoke<RustDirEntry[]>("storage_list_media", { kind });
   }
+  // Excluded folders are pruned while listing, so caches and thumbnails are never even read.
   if (isTreeSource(source)) {
-    return invoke<RustDirEntry[]>("storage_list_tree", { uri: source });
+    return invoke<RustDirEntry[]>("storage_list_tree", { uri: source, skipDirs: SKIP_DIR_NAMES });
   }
-  return invoke<RustDirEntry[]>("read_dir_recursive", { path: source });
+  return invoke<RustDirEntry[]>("read_dir_recursive", { path: source, skipDirs: SKIP_DIR_NAMES });
 }
 
 interface RustDirEntry {
@@ -74,6 +75,16 @@ interface RustDirEntry {
   is_dir: boolean;
   size: number;
   mtime_ms: number;
+}
+
+/** Resolves with the promise's value, or with an empty list as soon as the signal aborts. */
+function abortable(work: Promise<RustDirEntry[]>, signal?: AbortSignal): Promise<RustDirEntry[]> {
+  if (!signal) return work;
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) return resolve([]);
+    signal.addEventListener("abort", () => resolve([]), { once: true });
+    work.then(resolve, reject);
+  });
 }
 
 /** Wait one macrotask to keep the UI responsive during large walks. */
@@ -123,7 +134,8 @@ async function walkOneFolder(
 ): Promise<void> {
   let entries: RustDirEntry[];
   try {
-    entries = await listSourceEntries(absRoot);
+    entries = await abortable(listSourceEntries(absRoot), signal);
+    if (signal?.aborted) return;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     // Android photo/video/folder sources: a failed listing (usually a missing media
@@ -138,8 +150,12 @@ async function walkOneFolder(
   }
   console.log(`[backup.walker] ${absRoot}: ${entries.length} entries`);
 
+  const seen = new Set<string>();
+  let processed = 0;
   for (const entry of entries) {
     if (signal?.aborted) return;
+    // Long lists are filtered in slices so the UI stays responsive and Cancel is heard.
+    if (++processed % 500 === 0) await yieldToUi();
 
     // Compute the path RELATIVE to the source root for exclude matching.
     // The Rust command returns each entry's rel_path computed against ITS
@@ -171,20 +187,14 @@ async function walkOneFolder(
 
     // Rust struct is snake_case; convert to camelCase so downstream
     // (manifest.ts, runner.ts) can use a consistent shape.
+    if (seen.has(entry.abs_path)) continue;
+    seen.add(entry.abs_path);
     out.push({
       absPath: entry.abs_path,
       relPath: entryRel,
       size: entry.size,
       mtimeMs: entry.mtime_ms,
     });
-  }
-
-  // Dedupe by absPath — defensive in case the Rust command returned the
-  // same file via multiple paths (e.g. trailing-slash quirks).
-  const seen = new Set<string>();
-  for (let i = out.length - 1; i >= 0; i--) {
-    if (seen.has(out[i].absPath)) out.splice(i, 1);
-    else seen.add(out[i].absPath);
   }
 }
 

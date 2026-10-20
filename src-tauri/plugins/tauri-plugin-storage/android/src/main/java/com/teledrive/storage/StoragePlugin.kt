@@ -53,6 +53,12 @@ class UriArgs {
 }
 
 @InvokeArg
+class TreeArgs {
+    var uri: String? = null
+    var skipDirs: Array<String>? = null
+}
+
+@InvokeArg
 class ThumbArgs {
     var uri: String? = null
     var mime: String? = null
@@ -164,38 +170,59 @@ class StoragePlugin(private val activity: Activity) : Plugin(activity) {
 
     @Command
     fun listTree(invoke: Invoke) {
-        val uri = invoke.parseArgs(UriArgs::class.java).uri
+        val args = invoke.parseArgs(TreeArgs::class.java)
+        val uri = args.uri
         if (uri == null) {
             invoke.reject("missing uri")
             return
         }
-        val root = DocumentFile.fromTreeUri(activity, Uri.parse(uri))
+        val treeUri = Uri.parse(uri)
+        val root = DocumentFile.fromTreeUri(activity, treeUri)
         if (root == null || !root.isDirectory) {
             invoke.reject("This folder is no longer accessible. Add it again.")
             return
         }
+        val skip = (args.skipDirs ?: emptyArray()).map { it.lowercase() }.toHashSet()
         val entries = JSONArray()
-        collectFiles(root, "", entries)
+        collectFiles(treeUri, DocumentsContract.getTreeDocumentId(treeUri), "", skip, entries)
         invoke.resolve(JSObject().apply { put("entries", entries) })
     }
 
-    private fun collectFiles(dir: DocumentFile, prefix: String, out: JSONArray) {
-        for (child in dir.listFiles()) {
-            val name = child.name ?: continue
-            val relPath = prefix + name
-            if (child.isDirectory) {
-                collectFiles(child, "$relPath/", out)
-            } else if (child.isFile) {
-                out.put(
-                    JSONObject().apply {
-                        put("uri", child.uri.toString())
-                        put("relPath", relPath)
-                        put("size", child.length())
-                        put("mtimeMs", child.lastModified())
-                    }
-                )
+    /**
+     * One provider query per folder (name, type, size and date together). DocumentFile.listFiles()
+     * queries each child separately, which is far too slow for folders like DCIM. Folders whose
+     * name is in `skip` (thumbnails, trash, caches) are not entered.
+     */
+    private fun collectFiles(treeUri: Uri, docId: String, prefix: String, skip: Set<String>, out: JSONArray) {
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
+        val columns = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+            DocumentsContract.Document.COLUMN_SIZE,
+            DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+        )
+        val subfolders = ArrayList<Pair<String, String>>()
+        activity.contentResolver.query(childrenUri, columns, null, null, null)?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val id = cursor.getString(0) ?: continue
+                val name = cursor.getString(1) ?: continue
+                val relPath = prefix + name
+                if (cursor.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR) {
+                    if (name.lowercase() !in skip) subfolders.add(id to "$relPath/")
+                } else {
+                    out.put(
+                        JSONObject().apply {
+                            put("uri", DocumentsContract.buildDocumentUriUsingTree(treeUri, id).toString())
+                            put("relPath", relPath)
+                            put("size", if (cursor.isNull(3)) 0L else cursor.getLong(3))
+                            put("mtimeMs", if (cursor.isNull(4)) 0L else cursor.getLong(4))
+                        }
+                    )
+                }
             }
         }
+        for ((id, path) in subfolders) collectFiles(treeUri, id, path, skip, out)
     }
 
     @Command

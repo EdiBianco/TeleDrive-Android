@@ -56,8 +56,18 @@ export function normalizeRelativePath(p: string): string {
  *   - `?`         → any single non-slash char
  *   - everything else is a literal (regex-escaped)
  */
+const regexCache = new Map<string, RegExp | null>();
+
 export function globToRegex(pattern: string): RegExp | null {
   if (!pattern) return null;
+  const cached = regexCache.get(pattern);
+  if (cached !== undefined) return cached;
+  const compiled = compileGlob(pattern);
+  regexCache.set(pattern, compiled);
+  return compiled;
+}
+
+function compileGlob(pattern: string): RegExp | null {
   const normalized = normalizeRelativePath(pattern);
   let regex = "^";
   for (let i = 0; i < normalized.length; i++) {
@@ -86,33 +96,49 @@ export function globToRegex(pattern: string): RegExp | null {
   }
 }
 
-export const DEFAULT_EXCLUDES = [
+/** Folder names never worth backing up: caches, thumbnails, trash, VCS and OS metadata. */
+export const SKIP_DIR_NAMES = [
   ".git",
-  ".git/**",
-  "**/.git",
-  "**/.git/**",
-  ".DS_Store",
-  "**/.DS_Store",
-  "._*",
-  "**/._*",
   "node_modules",
-  "node_modules/**",
-  "**/node_modules",
-  "**/node_modules/**",
+  ".thumbnails",
+  ".trash",
+  ".Trash",
+  ".trashed",
+  ".cache",
+  ".pending",
+  "@eaDir",
+  ".Trashes",
+  ".Spotlight-V100",
+  ".fseventsd",
+  "$RECYCLE.BIN",
+  "System Volume Information",
+];
+
+/** File name patterns: temp, partial downloads, Android trash/pending/thumbnail leftovers. */
+const SKIP_FILE_GLOBS = [
+  ".DS_Store",
+  "._*",
   "Thumbs.db",
-  "**/Thumbs.db",
   "desktop.ini",
-  "**/desktop.ini",
   "ehthumbs.db",
-  "**/ehthumbs.db",
   ".directory",
-  "**/.directory",
+  ".nomedia",
   "*.tmp",
-  "**/*.tmp",
+  "*.temp",
   "*.bak",
-  "**/*.bak",
   "*~",
-  "**/*~",
+  "*.part",
+  "*.partial",
+  "*.crdownload",
+  "*.swp",
+  ".trashed-*",
+  ".pending-*",
+  ".thumbdata*",
+];
+
+export const DEFAULT_EXCLUDES = [
+  ...SKIP_DIR_NAMES.flatMap((n) => [n, `${n}/**`, `**/${n}`, `**/${n}/**`]),
+  ...SKIP_FILE_GLOBS.flatMap((g) => [g, `**/${g}`]),
 ];
 
 /**

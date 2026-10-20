@@ -287,20 +287,15 @@ export function recordUpload(
   absPath: string,
   info: { mtimeMs: number; size: number; messageId: number; folderPath: string },
 ): BackupManifest {
-  return {
-    ...manifest,
-    lastRunAt: Date.now(),
-    entries: {
-      ...manifest.entries,
-      [absPath]: {
-        mtimeMs: info.mtimeMs,
-        size: info.size,
-        messageId: info.messageId,
-        folderPath: info.folderPath,
-        uploadedAt: new Date().toISOString(),
-      },
-    },
+  // Entries are updated in place: copying the whole map per file made large backups quadratic.
+  manifest.entries[absPath] = {
+    mtimeMs: info.mtimeMs,
+    size: info.size,
+    messageId: info.messageId,
+    folderPath: info.folderPath,
+    uploadedAt: new Date().toISOString(),
   };
+  return { ...manifest, lastRunAt: Date.now() };
 }
 
 // ---------------------------------------------------------------------------

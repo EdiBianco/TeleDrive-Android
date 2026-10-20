@@ -386,7 +386,7 @@ fn unix_ms(t: SystemTime) -> u64 {
         .unwrap_or(0)
 }
 
-fn walk_recursive(root: &Path, current: &Path, out: &mut Vec<DirEntry>) {
+fn walk_recursive(root: &Path, current: &Path, skip: &[String], out: &mut Vec<DirEntry>) {
     let entries = match std::fs::read_dir(current) {
         Ok(it) => it,
         Err(err) => {
@@ -427,16 +427,15 @@ fn walk_recursive(root: &Path, current: &Path, out: &mut Vec<DirEntry>) {
             mtime_ms,
         });
 
-        // Recurse into directories. We push the dir entry FIRST so the JS
-        // layer can prune it via exclude globs before processing children.
-        if is_dir {
-            walk_recursive(root, &path, out);
+        // Recurse into directories, except cache/trash/thumbnail folders.
+        if is_dir && !skip.iter().any(|s| s.eq_ignore_ascii_case(&file_name)) {
+            walk_recursive(root, &path, skip, out);
         }
     }
 }
 
 #[tauri::command]
-async fn read_dir_recursive(path: String) -> Result<Vec<DirEntry>, String> {
+async fn read_dir_recursive(path: String, skip_dirs: Vec<String>) -> Result<Vec<DirEntry>, String> {
     let root = Path::new(&path);
     let meta = std::fs::metadata(root).map_err(|e| format!("stat({path}) failed: {e}"))?;
     if !meta.is_dir() {
@@ -447,7 +446,7 @@ async fn read_dir_recursive(path: String) -> Result<Vec<DirEntry>, String> {
     let path_owned = path.clone();
     let entries = tauri::async_runtime::spawn_blocking(move || {
         let mut out: Vec<DirEntry> = Vec::new();
-        walk_recursive(Path::new(&path_owned), Path::new(&path_owned), &mut out);
+        walk_recursive(Path::new(&path_owned), Path::new(&path_owned), &skip_dirs, &mut out);
         out
     })
     .await
@@ -863,9 +862,9 @@ async fn storage_list_media(app: AppHandle, kind: String) -> Result<Vec<DirEntry
 
 /// Lists every file under a folder picked with `storage_pick_folder`.
 #[tauri::command]
-async fn storage_list_tree(app: AppHandle, uri: String) -> Result<Vec<DirEntry>, String> {
+async fn storage_list_tree(app: AppHandle, uri: String, skip_dirs: Vec<String>) -> Result<Vec<DirEntry>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let value = app.storage().list_tree(&uri).map_err(|e| e.to_string())?;
+        let value = app.storage().list_tree(&uri, &skip_dirs).map_err(|e| e.to_string())?;
         storage_entries(value)
     })
     .await

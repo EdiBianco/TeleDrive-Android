@@ -59,10 +59,10 @@ impl<R: Runtime> Storage<R> {
   }
 
   /// Recursively lists files under a folder picked with `pick_folder`.
-  pub fn list_tree(&self, uri: &str) -> Result<serde_json::Value> {
+  pub fn list_tree(&self, uri: &str, skip_dirs: &[String]) -> Result<serde_json::Value> {
     self
       .0
-      .run_mobile_plugin("listTree", serde_json::json!({ "uri": uri }))
+      .run_mobile_plugin("listTree", serde_json::json!({ "uri": uri, "skipDirs": skip_dirs }))
       .map_err(Into::into)
   }
 

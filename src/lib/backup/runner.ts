@@ -399,6 +399,7 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
   // manages Telegram-side FLOOD_WAIT backoff, and parallel uploads from
   // the backup runner would race the user's regular upload queue.
   let pendingIndexSaves = 0;
+  let pendingManifestSaves = 0;
   for (let i = 0; i < diff.toUpload.length; i++) {
     if (opts.signal?.aborted) {
       firstError ??= "Cancelled by user.";
@@ -523,7 +524,11 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
         messageId,
         folderPath,
       });
-      await saveManifest(manifest);
+      // Persist in batches: serialising and sealing the whole manifest per file is slow on big runs.
+      if (++pendingManifestSaves >= BACKUP_INDEX_SAVE_EVERY) {
+        pendingManifestSaves = 0;
+        await saveManifest(manifest);
+      }
 
       // Android sources: build a thumbnail from the phone's own copy and cache it, so this
       // device never downloads the file back just to show it. Failure is harmless.
@@ -681,6 +686,8 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
       // Continue with the rest for transient errors — partial is better than nothing.
     }
   }
+
+  if (pendingManifestSaves > 0) await saveManifest(manifest);
 
   // Save the index for files uploaded since the last batched save.
   if (pendingIndexSaves > 0) {
