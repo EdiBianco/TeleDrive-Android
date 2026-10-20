@@ -63,6 +63,7 @@ import { isBackupItem, BACKUP_ROOT, BACKUP_ROOT_PREFIX } from "@/lib/backup/visi
 import { toast } from "sonner";
 import { usePinchColumns } from "@/hooks/usePinchColumns";
 import { openOrShareFile } from "@/lib/files/openShare";
+import { useDismissedNotice } from "@/hooks/useDismissedNotice";
 import ThumbImage from "./ThumbImage";
 
 // ---------------------------------------------------------------------------
@@ -164,6 +165,7 @@ interface FileBrowserProps {
 export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = "" }: FileBrowserProps) {
   const navigate = useNavigate();
   const pinch = usePinchColumns();
+  const backupsNotice = useDismissedNotice("backups-readonly");
   const files = useFileStore((state) => state.files);
   const selectedIds = useFileStore((state) => state.selectedIds);
   const selectedIdsSet = useFileStore((state) => state.selectedIdsSet);
@@ -930,9 +932,18 @@ export function FileBrowser({ folderPath = "/", mode = "drive", searchQuery = ""
       </div>
 
       {/* Read-only banner for Backups */}
-      {mode === "backups" && (
-        <div className="flex items-start gap-2.5 px-4 py-3 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/40 bg-emerald-50/70 dark:bg-emerald-950/20 text-xs text-emerald-900 dark:text-emerald-200 shrink-0">
+      {mode === "backups" && !backupsNotice.dismissed && (
+        <div className="relative flex items-start gap-2.5 pl-4 pr-10 py-3 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/40 bg-emerald-50/70 dark:bg-emerald-950/20 text-xs text-emerald-900 dark:text-emerald-200 shrink-0">
           <Shield className="h-4 w-4 mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <button
+            type="button"
+            onClick={backupsNotice.dismiss}
+            aria-label="Dismiss"
+            title="Dismiss"
+            className="absolute top-2 right-2 rounded-full p-1 opacity-70 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
           <div className="flex-1 min-w-0 leading-relaxed">
             <p className="font-bold">Backups are read-only.</p>
             <p className="mt-0.5 text-emerald-900/80 dark:text-emerald-300/80">
