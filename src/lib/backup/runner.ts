@@ -250,7 +250,13 @@ export function buildDeviceFolder(): string {
 export async function runBackup(opts: RunBackupOptions): Promise<BackupRunResult> {
   const release = await backupMutex.acquire();
   try {
-    return await runBackupInner(opts);
+    const result = await runBackupInner(opts);
+    // "Last backup" means a run that finished without failing. Early exits (no folders,
+    // channel not ready, walker error) and failed runs leave the previous time in place.
+    if (result.status !== "failed") {
+      useFileStore.getState().setLastBackupAt(Date.now());
+    }
+    return result;
   } finally {
     release();
   }
@@ -717,10 +723,6 @@ async function runBackupInner(opts: RunBackupOptions): Promise<BackupRunResult> 
   } catch {
     // logEvent is fire-and-forget; ignore its own errors.
   }
-
-  // Update the fileStore timestamp so the UI re-renders the "Last backup"
-  // label. The store setter is a no-op when bootstrap hasn't completed.
-  useFileStore.getState().setLastBackupAt(Date.now());
 
   return {
     triggeredBy: opts.triggeredBy,
