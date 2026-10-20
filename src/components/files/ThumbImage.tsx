@@ -10,10 +10,12 @@ import { requestThumbnail, type ThumbRequest } from "@/lib/telegram/thumbnails";
 export default function ThumbImage({
   file,
   large = false,
+  contain = false,
   children,
 }: {
   file: TeleFile;
   large?: boolean;
+  contain?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -58,7 +60,7 @@ export default function ThumbImage({
 
   return (
     <div ref={ref} className="w-full h-full flex items-center justify-center">
-      {url ? <img src={url} alt={file.name} loading="lazy" className="w-full h-full object-cover" /> : children}
+      {url ? <img src={url} alt={file.name} loading="lazy" className={`w-full h-full ${contain ? "object-contain" : "object-cover"}`} /> : children}
     </div>
   );
 }
